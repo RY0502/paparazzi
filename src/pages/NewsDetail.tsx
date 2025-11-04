@@ -35,7 +35,6 @@ function NewsDetail({ category, personName, newsTitle, onBack }: NewsDetailProps
         const url = `${supabaseUrl}/functions/v1/stream-news-content?${params.toString()}`;
 
         const response = await fetch(url, {
-          method: 'POST',
           headers: {
             Authorization: `Bearer ${anonKey}`,
           },
