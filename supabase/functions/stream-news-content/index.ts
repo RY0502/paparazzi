@@ -30,7 +30,12 @@ async function streamNewsContent(category, personName, newsTitle, controller) {
           {
             google_search: {}
           }
-        ]
+        ],
+        generationConfig: {
+          thinkingConfig: {
+            thinkingBudget: 0
+          }
+        }
       })
     });
     if (!response.ok) {
