@@ -16,3 +16,9 @@ export interface CachedNews {
   cached_at: string;
   expires_at: string;
 }
+
+export interface NewsDetailParams {
+  category: Category;
+  personName: string;
+  newsTitle: string;
+}

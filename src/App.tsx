@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Loader2, ExternalLink, Sparkles } from 'lucide-react';
+import { Loader2, Sparkles } from 'lucide-react';
 import NewsCard from './components/NewsCard';
 import TabButton from './components/TabButton';
+import NewsDetail from './pages/NewsDetail';
 import { fetchNews } from './services/newsService';
 import type { NewsItem, Category } from './types';
 
@@ -10,9 +11,20 @@ function App() {
   const [news, setNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedNews, setSelectedNews] = useState<{
+    personName: string;
+    newsTitle: string;
+  } | null>(null);
+  const [scrollPosition, setScrollPosition] = useState(0);
 
   useEffect(() => {
-    loadNews( activeTab);
+    if (!selectedNews) {
+      window.scrollTo(0, scrollPosition);
+    }
+  }, [selectedNews, scrollPosition]);
+
+  useEffect(() => {
+    loadNews(activeTab);
   }, [activeTab]);
 
   const loadNews = async (category: Category) => {
@@ -30,10 +42,25 @@ function App() {
     }
   };
 
-  const handleNewsClick = (searchQuery: string) => {
-    const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(searchQuery)}`;
-    window.open(searchUrl, '_blank', 'noopener,noreferrer');
+  const handleNewsClick = (personName: string, newsTitle: string) => {
+    setScrollPosition(window.scrollY);
+    setSelectedNews({ personName, newsTitle });
   };
+
+  const handleBackFromDetail = () => {
+    setSelectedNews(null);
+  };
+
+  if (selectedNews) {
+    return (
+      <NewsDetail
+        category={activeTab}
+        personName={selectedNews.personName}
+        newsTitle={selectedNews.newsTitle}
+        onBack={handleBackFromDetail}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
@@ -55,11 +82,11 @@ function App() {
                 active={activeTab === 'bollywood'}
                 onClick={() => setActiveTab('bollywood')}
                 label={
-    <>
-      <span className="sm:hidden">B’wood</span>
-      <span className="hidden sm:inline">Bollywood</span>
-    </>
-  }
+                  <>
+                    <span className="sm:hidden">B'wood</span>
+                    <span className="hidden sm:inline">Bollywood</span>
+                  </>
+                }
               />
               <TabButton
                 active={activeTab === 'tv'}
@@ -70,11 +97,11 @@ function App() {
                 active={activeTab === 'hollywood'}
                 onClick={() => setActiveTab('hollywood')}
                 label={
-    <>
-      <span className="sm:hidden">H’wood</span>
-      <span className="hidden sm:inline">Hollywood</span>
-    </>
-  }
+                  <>
+                    <span className="sm:hidden">H'wood</span>
+                    <span className="hidden sm:inline">Hollywood</span>
+                  </>
+                }
               />
             </nav>
           </div>
@@ -114,7 +141,7 @@ function App() {
                 <NewsCard
                   key={item.id}
                   item={item}
-                  onClick={() => handleNewsClick(item.search_query)}
+                  onClick={handleNewsClick}
                 />
               ))}
             </div>
