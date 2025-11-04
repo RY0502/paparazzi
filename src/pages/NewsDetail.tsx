@@ -99,7 +99,7 @@ function NewsDetail({ category, personName, newsTitle, onBack }: NewsDetailProps
   }, [category, personName, newsTitle]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex flex-col">
       <div className="fixed top-0 left-0 right-0 z-10 bg-slate-950/80 backdrop-blur-xl border-b border-slate-800/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center h-16 sm:h-20 gap-4">
@@ -142,7 +142,7 @@ function NewsDetail({ category, personName, newsTitle, onBack }: NewsDetailProps
         </div>
       </div>
 
-      <main className="pt-28 pb-16 px-4 sm:px-6 lg:px-8">
+      <main className="flex-grow pt-28 pb-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto">
           <div className="mb-12">
             <h1 className="text-4xl sm:text-5xl font-bold mb-4">
@@ -162,7 +162,7 @@ function NewsDetail({ category, personName, newsTitle, onBack }: NewsDetailProps
                 <div className="absolute inset-0 blur-xl bg-rose-500/30 animate-pulse"></div>
               </div>
               <p className="mt-8 text-slate-400 font-medium text-lg">
-                Gathering latest news and details...
+                Fetching details...
               </p>
             </div>
           ) : error ? (
@@ -207,6 +207,13 @@ function NewsDetail({ category, personName, newsTitle, onBack }: NewsDetailProps
           )}
         </div>
       </main>
+       <footer className="border-t border-slate-800/50 bg-slate-950/80 backdrop-blur-xl">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <p className="text-center text-slate-500 text-sm">
+            © 2025 RYaxn. Entertainment news at your fingertips.
+          </p>
+        </div>
+      </footer>
     </div>
   );
 }
