@@ -32,12 +32,15 @@ function NewsDetail({ category, personName, newsTitle, onBack }: NewsDetailProps
         const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
         const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-        const url = `${supabaseUrl}/functions/v1/stream-news-content?${params.toString()}`;
+        const url = `${supabaseUrl}/functions/v1/stream-news-content`;
 
         const response = await fetch(url, {
+          method: 'POST',
           headers: {
             Authorization: `Bearer ${anonKey}`,
+            'Content-Type': 'application/x-www-form-urlencoded',
           },
+          body: params.toString(),
         });
 
         if (!response.ok) {
@@ -79,6 +82,7 @@ function NewsDetail({ category, personName, newsTitle, onBack }: NewsDetailProps
                   setContent((prev) => prev + data.text);
                 }
               } catch {
+                // ignore malformed lines
               }
             }
           }
