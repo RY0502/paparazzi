@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { ArrowLeft, Loader2, Sparkles, Clock } from 'lucide-react';
 import TabButton from '../components/TabButton';
 import type { Category } from '../types';
 
@@ -15,6 +15,10 @@ function NewsDetail({ category, personName, newsTitle, onBack }: NewsDetailProps
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
 
   useEffect(() => {
     const fetchStreamingContent = async () => {
@@ -111,7 +115,7 @@ function NewsDetail({ category, personName, newsTitle, onBack }: NewsDetailProps
               <ArrowLeft className="w-6 h-6 text-rose-500 group-hover:text-rose-400 transition-colors" />
             </button>
 
-            <nav className="flex gap-0">
+            <nav className="flex gap-2">
               <TabButton
                 active={category === 'bollywood'}
                 onClick={() => {}}
@@ -145,6 +149,12 @@ function NewsDetail({ category, personName, newsTitle, onBack }: NewsDetailProps
       <main className="flex-grow pt-28 pb-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto">
           <div className="mb-12">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-slate-800/50 backdrop-blur-sm rounded-full mb-4 border border-slate-700/50">
+              <Sparkles className="w-4 h-4 text-amber-400" />
+              <span className="text-slate-300 text-xs font-semibold uppercase tracking-wider">
+                {category}
+              </span>
+            </div>
             <h1 className="text-4xl sm:text-5xl font-bold mb-4">
               <span className="bg-gradient-to-r from-rose-500 via-pink-500 to-rose-500 bg-clip-text text-transparent">
                 {personName}
@@ -152,7 +162,17 @@ function NewsDetail({ category, personName, newsTitle, onBack }: NewsDetailProps
               <span className="text-slate-400 mx-3">—</span>
               <span className="text-white">{newsTitle}</span>
             </h1>
-            <div className="h-1 w-32 bg-gradient-to-r from-rose-500 to-pink-500 rounded-full"></div>
+            <div className="flex items-center gap-4 text-slate-400 mb-6">
+              <div className="flex items-center gap-2">
+                <Clock className="w-4 h-4" />
+                <span className="text-sm font-medium">
+                  {Math.ceil(content.split(' ').length / 200)} min read
+                </span>
+              </div>
+            </div>
+            <div className="flex justify-center">
+              <div className="h-1 w-[85%] bg-gradient-to-r from-rose-500 to-pink-500 rounded-full"></div>
+            </div>
           </div>
 
           {loading && content === '' ? (
@@ -207,11 +227,24 @@ function NewsDetail({ category, personName, newsTitle, onBack }: NewsDetailProps
           )}
         </div>
       </main>
+
+      {/* Footer */}
        <footer className="border-t border-slate-800/50 bg-slate-950/80 backdrop-blur-xl">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <p className="text-center text-slate-500 text-sm">
-            © 2025 RYaxn. Entertainment news at your fingertips.
-          </p>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="bg-gradient-to-r from-rose-500 to-pink-500 p-2 rounded-lg">
+                <Sparkles className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <p className="text-white font-bold">Paparazzi</p>
+                <p className="text-slate-400 text-sm">Entertainment News</p>
+              </div>
+            </div>
+            <p className="text-slate-500 text-sm">
+              © 2025 RYaxn. All rights reserved.
+            </p>
+          </div>
         </div>
       </footer>
     </div>

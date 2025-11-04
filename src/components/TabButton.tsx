@@ -1,7 +1,9 @@
+import type { ReactNode } from 'react';
+
 interface TabButtonProps {
   active: boolean;
   onClick: () => void;
-  label: string;
+  label: ReactNode;
 }
 
 function TabButton({ active, onClick, label }: TabButtonProps) {

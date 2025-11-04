@@ -43,7 +43,7 @@ function NewsCard({ item, onClick }: NewsCardProps) {
               alt={item.person_name}
               onError={handleImageError}
               onLoad={handleImageLoad}
-    class="absolute inset-0 h-full w-full object-cover [object-position:50%_15%] bg-neutral-100 aspect-[4/3]"
+              className="absolute inset-0 h-full w-full object-cover [object-position:50%_15%] bg-neutral-100 aspect-[4/3]"
             />
           )}
 
@@ -72,9 +72,9 @@ function NewsCard({ item, onClick }: NewsCardProps) {
               })}
             </time>
 
-            <div className="flex items-center gap-2 text-rose-400 group-hover:text-rose-300 transition-colors">
-              <span className="text-sm font-medium">Read More</span>
-              <ExternalLink className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            <div className="flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-xl rounded-full border border-white/20 group-hover:bg-rose-500 group-hover:border-rose-500 transition-all duration-300">
+              <span className="text-white text-sm font-semibold">Read Full Story</span>
+              <ExternalLink className="w-4 h-4 text-white group-hover:translate-x-1 transition-transform" />
             </div>
           </div>
         </div>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Loader2, Sparkles } from 'lucide-react';
+import { Loader2, Sparkles, Star } from 'lucide-react';
 import NewsCard from './components/NewsCard';
 import TabButton from './components/TabButton';
 import NewsDetail from './pages/NewsDetail';
@@ -69,12 +69,17 @@ function App() {
           <div className="flex items-center h-16 sm:h-20 gap-2 sm:gap-6">
             <div className="flex items-center gap-3 group cursor-pointer">
               <div className="relative">
-                <Sparkles className="w-7 h-7 sm:w-8 sm:h-8 text-rose-500 group-hover:text-rose-400 transition-colors" />
-                <div className="absolute inset-0 blur-xl bg-rose-500/30 group-hover:bg-rose-400/40 transition-all"></div>
+                <div className="absolute inset-0 bg-gradient-to-r from-rose-500 to-pink-500 rounded-xl blur-xl opacity-60 group-hover:opacity-100 transition-opacity animate-glow"></div>
+                <div className="relative bg-gradient-to-r from-rose-500 to-pink-500 p-2 rounded-xl">
+                  <Sparkles className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
+                </div>
               </div>
-              <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-rose-500 via-pink-500 to-rose-500 bg-clip-text text-transparent">
-                Paparazzi
-              </h1>
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-rose-500 via-pink-500 to-rose-500 bg-clip-text text-transparent">
+                  Paparazzi
+                </h1>
+                <p className="text-slate-400 text-xs hidden sm:block">Entertainment News</p>
+              </div>
             </div>
 
             <nav className="flex gap-0">
@@ -111,6 +116,12 @@ function App() {
       <main className="pt-28 pb-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto">
           <div className="mb-8 text-center">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-slate-800/50 backdrop-blur-sm rounded-full mb-4 border border-slate-700/50">
+              <Star className="w-4 h-4 text-amber-400" />
+              <span className="text-slate-300 text-xs font-semibold uppercase tracking-wider">
+                Latest Updates
+              </span>
+            </div>
             <h2 className="text-4xl font-bold text-white mb-2 capitalize">
               {activeTab} News
             </h2>
@@ -150,10 +161,21 @@ function App() {
       </main>
 
       <footer className="border-t border-slate-800/50 bg-slate-950/80 backdrop-blur-xl">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <p className="text-center text-slate-500 text-sm">
-            © 2025 RYaxn. Entertainment news at your fingertips.
-          </p>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="bg-gradient-to-r from-rose-500 to-pink-500 p-2 rounded-lg">
+                <Sparkles className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <p className="text-white font-bold">Paparazzi</p>
+                <p className="text-slate-400 text-sm">Entertainment News</p>
+              </div>
+            </div>
+            <p className="text-slate-500 text-sm">
+              © 2025 RYaxn. All rights reserved.
+            </p>
+          </div>
         </div>
       </footer>
     </div>
