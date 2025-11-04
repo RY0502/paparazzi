@@ -18,7 +18,7 @@ async function streamNewsContent(
       throw new Error("GEMINI_API_KEY not configured");
     }
 
-    const prompt = `Generate a comprehensive text summary of the given news regarding the provided celebrity. Provide the latest available contents though search. ${category} ${personName} - ${newsTitle}`;
+    const prompt = `Generate a comprehensive text summary of the given news regarding the provided celebrity. Provide the latest available contents through search. ${category} ${personName} - ${newsTitle}`;
 
     const response = await fetch(
       "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse",
