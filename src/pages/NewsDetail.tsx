@@ -170,9 +170,7 @@ function NewsDetail({ category, personName, newsTitle, onBack }: NewsDetailProps
                 </span>
               </div>
             </div>
-            <div className="flex justify-center">
-              <div className="h-1 w-[85%] bg-gradient-to-r from-rose-500 to-pink-500 rounded-full"></div>
-            </div>
+            <div className="h-1 w-32 bg-gradient-to-r from-rose-500 to-pink-500 rounded-full"></div>
           </div>
 
           {loading && content === '' ? (
