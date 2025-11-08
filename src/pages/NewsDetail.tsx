@@ -180,7 +180,7 @@ function NewsDetail({ category, personName, newsTitle, onBack }: NewsDetailProps
                 <div className="absolute inset-0 blur-xl bg-rose-500/30 animate-pulse"></div>
               </div>
               <p className="mt-8 text-slate-400 font-medium text-lg">
-                Fetching details...
+                Loading details...
               </p>
             </div>
           ) : error ? (
