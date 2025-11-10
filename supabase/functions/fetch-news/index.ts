@@ -20,7 +20,7 @@ Deepika Padukone - Wins Best Actress award at film festival
 Requirements:
 - Use real, well-known Bollywood celebrities
 - Keep each news item to one line
-- Make news current and realistic
+- Make news current with the look out for gossip and scandalous news
 - Return exactly 15 items`,
     tv: `Generate exactly 15 latest entertainment news items about Indian daily soap and TV industry actors from today. Each news item must be on a separate line in this exact format:
 [Person Name] - [Single line news description]
@@ -32,7 +32,7 @@ Rupali Ganguly - Show reaches 1000 episode milestone
 Requirements:
 - Use real, well-known Indian TV actors
 - Keep each news item to one line
-- Make news current and realistic
+- Make news current with the look out for gossip and scandalous news
 - Return exactly 15 items`,
     hollywood: `Generate exactly 15 latest entertainment news items about American Hollywood actors and singers from today. Each news item must be on a separate line in this exact format:
 [Person Name] - [Single line news description]
@@ -44,7 +44,7 @@ Taylor Swift - Announces surprise album release
 Requirements:
 - Use real, well-known Hollywood celebrities
 - Keep each news item to one line
-- Make news current and realistic
+- Make news current with the look out for gossip and scandalous news
 - Return exactly 15 items`
   };
   const prompt = prompts[category];
@@ -116,8 +116,12 @@ async function fetchPersonImage(personName) {
     if (response.ok) {
       const data = await response.json();
       if (data.query && data.query.pages) {
-        const firstPage = Object.values(data.query.pages)[0];
-        const info = firstPage.imageinfo?.[0];
+        const pages = Object.values(data.query.pages);
+        // generate random integer between 0 and 40 inclusive
+        const randIndex = Math.floor(Math.random() * 41); // 0..40
+        // choose page at random index if it exists, otherwise fallback to first
+        const chosenPage = pages[randIndex] ?? pages[0];
+        const info = chosenPage?.imageinfo?.[0];
         if (info) {
           return info.thumburl || info.url;
         }
