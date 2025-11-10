@@ -1,5 +1,4 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { createClient } from "npm:@supabase/supabase-js@2.57.4";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
@@ -21,7 +20,7 @@ Deepika Padukone - Wins Best Actress award at film festival
 Requirements:
 - Use real, well-known Bollywood celebrities
 - Keep each news item to one line
-- Make news current and realistic
+- Make news current with the look out for gossip and scandalous news
 - Return exactly 15 items`,
     tv: `Generate exactly 15 latest entertainment news items about Indian daily soap and TV industry actors from today. Each news item must be on a separate line in this exact format:
 [Person Name] - [Single line news description]
@@ -33,7 +32,7 @@ Rupali Ganguly - Show reaches 1000 episode milestone
 Requirements:
 - Use real, well-known Indian TV actors
 - Keep each news item to one line
-- Make news current and realistic
+- Make news current with the look out for gossip and scandalous news
 - Return exactly 15 items`,
     hollywood: `Generate exactly 15 latest entertainment news items about American Hollywood actors and singers from today. Each news item must be on a separate line in this exact format:
 [Person Name] - [Single line news description]
@@ -45,7 +44,7 @@ Taylor Swift - Announces surprise album release
 Requirements:
 - Use real, well-known Hollywood celebrities
 - Keep each news item to one line
-- Make news current and realistic
+- Make news current with the look out for gossip and scandalous news
 - Return exactly 15 items`
   };
   const prompt = prompts[category];
@@ -92,7 +91,6 @@ Requirements:
       newsItems.push({
         news_text: newsText.trim(),
         person_name: personName.trim(),
-        image_url: "",
         search_query: `${personName.trim()} ${newsText.trim()}`
       });
     }
@@ -118,8 +116,12 @@ async function fetchPersonImage(personName) {
     if (response.ok) {
       const data = await response.json();
       if (data.query && data.query.pages) {
-        const firstPage = Object.values(data.query.pages)[0];
-        const info = firstPage.imageinfo?.[0];
+        const pages = Object.values(data.query.pages);
+        // generate random integer between 0 and 40 inclusive
+        const randIndex = Math.floor(Math.random() * 41); // 0..40
+        // choose page at random index if it exists, otherwise fallback to first
+        const chosenPage = pages[randIndex] ?? pages[0];
+        const info = chosenPage?.imageinfo?.[0];
         if (info) {
           return info.thumburl || info.url;
         }
@@ -130,35 +132,6 @@ async function fetchPersonImage(personName) {
   }
   return `https://images.pexels.com/photos/1065084/pexels-photo-1065084.jpeg?auto=compress&cs=tinysrgb&w=800`;
 }
-async function updateNewsForCategory(supabase, category) {
-  try {
-    console.log(`Fetching news for ${category}...`);
-    const newsItems = await fetchFromGemini(category);
-    console.log(`Fetched ${newsItems.length} news items for ${category}`);
-    const newsWithImages = await Promise.all(newsItems.map(async (item)=>({
-        ...item,
-        image_url: await fetchPersonImage(item.person_name),
-        created_at: new Date().toISOString()
-      })));
-    const tableName = `${category}_news`;
-    const { error: insertError } = await supabase.from(tableName).insert(newsWithImages);
-    if (insertError) {
-      console.error(`Error inserting news for ${category}:`, insertError);
-      throw insertError;
-    }
-    console.log(`Successfully updated ${category} news`);
-    return {
-      success: true,
-      count: newsWithImages.length
-    };
-  } catch (error) {
-    console.error(`Error updating ${category} news:`, error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error"
-    };
-  }
-}
 Deno.serve(async (req)=>{
   if (req.method === "OPTIONS") {
     return new Response(null, {
@@ -167,40 +140,31 @@ Deno.serve(async (req)=>{
     });
   }
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    if (!supabaseUrl || !supabaseServiceKey) {
-      throw new Error("Supabase credentials not configured");
+    const url = new URL(req.url);
+    const category = url.searchParams.get("category");
+    if (!category || ![
+      "bollywood",
+      "tv",
+      "hollywood"
+    ].includes(category)) {
+      return new Response(JSON.stringify({
+        error: "Invalid category. Must be bollywood, tv, or hollywood"
+      }), {
+        status: 400,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json"
+        }
+      });
     }
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-    const results = await Promise.allSettled([
-      updateNewsForCategory(supabase, "bollywood"),
-      updateNewsForCategory(supabase, "tv"),
-      updateNewsForCategory(supabase, "hollywood")
-    ]);
-    const summary = results.map((result, index)=>{
-      const category = [
-        "bollywood",
-        "tv",
-        "hollywood"
-      ][index];
-      if (result.status === "fulfilled") {
-        return {
-          category,
-          ...result.value
-        };
-      } else {
-        return {
-          category,
-          success: false,
-          error: result.reason?.message || "Unknown error"
-        };
-      }
-    });
+    const newsItems = await fetchFromGemini(category);
+    const newsWithImages = await Promise.all(newsItems.map(async (item)=>({
+        ...item,
+        image_url: await fetchPersonImage(item.person_name)
+      })));
     return new Response(JSON.stringify({
-      message: "News update completed",
-      results: summary,
-      timestamp: new Date().toISOString()
+      success: true,
+      news: newsWithImages
     }), {
       status: 200,
       headers: {
@@ -209,7 +173,7 @@ Deno.serve(async (req)=>{
       }
     });
   } catch (error) {
-    console.error("Error in news-scheduler function:", error);
+    console.error("Error in fetch-news function:", error);
     return new Response(JSON.stringify({
       error: error instanceof Error ? error.message : "Internal server error"
     }), {
