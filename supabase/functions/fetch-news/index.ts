@@ -105,7 +105,7 @@ async function fetchPersonImage(personName) {
       generator: 'search',
       gsrsearch: personName,
       gsrnamespace: '6',
-      gsrlimit: '1',
+      gsrlimit: '20',
       prop: 'imageinfo',
       iiprop: 'url',
       iiurlwidth: '800',
