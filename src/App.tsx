@@ -64,7 +64,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
-      <div className="fixed top-0 left-0 right-0 z-10 bg-slate-950/80 backdrop-blur-xl border-b border-slate-800/50">
+      <div className="fixed top-0 left-0 right-0 z-10 bg-slate-950/30 backdrop-blur-2xl border-b border-white/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center h-16 sm:h-20 gap-2 sm:gap-6">
             <div className="flex items-center gap-3 group cursor-pointer">
@@ -116,7 +116,7 @@ function App() {
       <main className="pt-28 pb-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto">
           <div className="mb-8 text-center">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-slate-800/50 backdrop-blur-sm rounded-full mb-4 border border-slate-700/50">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/5 backdrop-blur-md rounded-full mb-4 border border-white/10">
               <Star className="w-4 h-4 text-amber-400" />
               <span className="text-slate-300 text-xs font-semibold uppercase tracking-wider">
                 Latest Updates
@@ -139,11 +139,11 @@ function App() {
               <p className="mt-6 text-slate-400 font-medium">Loading latest news...</p>
             </div>
           ) : error ? (
-            <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-8 text-center">
+            <div className="bg-red-500/10 backdrop-blur-lg border border-red-500/20 rounded-2xl p-8 text-center">
               <p className="text-red-400">{error}</p>
             </div>
           ) : news.length === 0 ? (
-            <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-8 text-center">
+            <div className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl p-8 text-center">
               <p className="text-slate-400">No news available at the moment.</p>
             </div>
           ) : (
@@ -160,7 +160,7 @@ function App() {
         </div>
       </main>
 
-      <footer className="border-t border-slate-800/50 bg-slate-950/80 backdrop-blur-xl">
+      <footer className="border-t border-white/10 bg-slate-950/30 backdrop-blur-2xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-3">

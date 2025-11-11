@@ -14,14 +14,14 @@ function TabButton({ active, onClick, label }: TabButtonProps) {
         relative px-5 py-2.5 rounded-xl font-semibold text-sm transition-all duration-300
         ${
           active
-            ? 'text-white'
-            : 'text-slate-400 hover:text-slate-200'
+            ? 'text-white bg-white/10 backdrop-blur-lg border border-white/20'
+            : 'text-slate-400 hover:text-slate-200 hover:bg-white/5 backdrop-blur-sm border border-transparent'
         }
       `}
     >
       {active && (
         <>
-          <div className="absolute inset-0 bg-gradient-to-r from-rose-500 to-pink-500 rounded-xl"></div>
+          <div className="absolute inset-0 bg-gradient-to-r from-rose-500/80 to-pink-500/80 rounded-xl"></div>
           <div className="absolute inset-0 bg-gradient-to-r from-rose-500 to-pink-500 rounded-xl blur-lg opacity-50"></div>
         </>
       )}
