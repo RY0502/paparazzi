@@ -118,8 +118,8 @@ async function fetchPersonImage(personName) {
       const data = await response.json();
       if (data.query && data.query.pages) {
         const pages = Object.values(data.query.pages);
-        // generate random integer between 0 and 9 inclusive
-        const randIndex = Math.floor(Math.random() * 10); // 0..9
+        // generate random integer between 0 and 19 inclusive
+        const randIndex = Math.floor(Math.random() * 21); // 0..19
         // choose page at random index if it exists, otherwise fallback to first
         const chosenPage = pages[randIndex] ?? pages[0];
         const info = chosenPage?.imageinfo?.[0];
