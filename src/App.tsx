@@ -82,7 +82,7 @@ function App() {
               </div>
             </div>
 
-            <nav className="flex gap-0">
+            <nav className="flex gap-0 overflow-hidden rounded-xl">
               <TabButton
                 active={activeTab === 'bollywood'}
                 onClick={() => setActiveTab('bollywood')}
