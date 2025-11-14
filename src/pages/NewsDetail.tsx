@@ -115,7 +115,7 @@ function NewsDetail({ category, personName, newsTitle, onBack }: NewsDetailProps
               <ArrowLeft className="w-6 h-6 text-rose-500 group-hover:text-rose-400 transition-colors" />
             </button>
 
-            <nav className="flex gap-2 overflow-hidden rounded-xl">
+            <nav className="flex gap-2">
               <TabButton
                 active={category === 'bollywood'}
                 onClick={() => {}}

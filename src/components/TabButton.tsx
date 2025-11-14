@@ -11,7 +11,7 @@ function TabButton({ active, onClick, label }: TabButtonProps) {
     <button
       onClick={onClick}
       className={`
-        relative px-5 py-2.5 rounded-xl font-semibold text-sm transition-all duration-300 overflow-hidden
+        relative px-5 py-2.5 rounded-xl font-semibold text-sm transition-all duration-300
         ${
           active
             ? 'text-white bg-white/10 backdrop-blur-lg border border-white/20'
@@ -21,8 +21,8 @@ function TabButton({ active, onClick, label }: TabButtonProps) {
     >
       {active && (
         <>
-          <div className="absolute inset-0 bg-gradient-to-r from-rose-500/80 to-pink-500/80 rounded-xl -inset-1"></div>
-          <div className="absolute inset-0 bg-gradient-to-r from-rose-500 to-pink-500 rounded-xl blur-lg opacity-50 -inset-2"></div>
+          <div className="absolute inset-0 bg-gradient-to-r from-rose-500/80 to-pink-500/80 rounded-xl"></div>
+          <div className="absolute inset-0 bg-gradient-to-r from-rose-500 to-pink-500 rounded-xl blur-lg opacity-50"></div>
         </>
       )}
       <span className="relative z-10">{label}</span>
