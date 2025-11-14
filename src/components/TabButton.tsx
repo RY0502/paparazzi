@@ -11,7 +11,7 @@ function TabButton({ active, onClick, label }: TabButtonProps) {
     <button
       onClick={onClick}
       className={`
-        relative px-5 py-2.5 rounded-xl font-semibold text-sm transition-all duration-300
+        relative px-4 sm:px-5 py-2.5 rounded-xl font-semibold text-sm transition-all duration-300
         ${
           active
             ? 'text-white bg-white/10 backdrop-blur-lg border border-white/20'
