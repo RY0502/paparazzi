@@ -5,41 +5,50 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey"
 };
-function safeSample(obj, maxLen = 2000) {
-  try {
-    const s = JSON.stringify(obj);
-    return s.length > maxLen ? s.slice(0, maxLen) + '...[truncated]' : s;
-  } catch (e) {
-    return String(obj);
-  }
-}
-async function fetchWithRetry(url, options = {}, retries = 2, backoff = 500) {
-  for(let i = 0; i <= retries; i++){
-    try {
-      const res = await fetch(url, options);
-      return res;
-    } catch (err) {
-      if (i === retries) throw err;
-      console.warn(`Fetch failed, retrying (${i + 1}/${retries})`, err);
-      await new Promise((r)=>setTimeout(r, backoff));
-    }
-  }
-}
 async function fetchFromGemini(category) {
   const geminiApiKey = Deno.env.get("GEMINI_API_KEY");
-  if (!geminiApiKey) {
-    throw new Error("GEMINI_API_KEY not configured");
-  }
+  if (!geminiApiKey) throw new Error("GEMINI_API_KEY not configured");
   const prompts = {
-    bollywood: `Generate exactly 15 latest entertainment news items about Indian Bollywood actors and singers from today. Each news item must be on a separate line in this exact format:\n[Person Name] - [Single line news description]\n\nRequirements:\n- Use real, well-known Bollywood celebrities\n- Keep each news item to one line\n- Make news current and tabloid worthy\n- Return exactly 15 items`,
-    tv: `Generate exactly 15 latest entertainment news items about Indian daily soap and TV industry actors from today. Each news item must be on a separate line in this exact format:\n[Person Name] - [Single line news description]\n\nRequirements:\n- Use real, well-known Indian TV actors\n- Keep each news item to one line\n- Make news current and  tabloid worthy\n- Return exactly 15 items`,
-    hollywood: `Generate exactly 15 latest entertainment news items about American Hollywood actors and singers from today. Each news item must be on a separate line in this exact format:\n[Person Name] - [Single line news description]\n\nRequirements:\n- Use real, well-known Hollywood celebrities\n- Keep each news item to one line\n- Make news current and  tabloid worthy\n- Return exactly 15 items`
+    bollywood: `Generate exactly 15 latest entertainment news items about Indian Bollywood actors and singers from today. Each news item must be on a separate line in this exact format:
+[Person Name] - [Single line news description]
+
+Example:
+Shah Rukh Khan - Announces new collaboration with international director
+Deepika Padukone - Wins Best Actress award at film festival
+
+Requirements:
+- Use real, well-known Bollywood celebrities
+- Keep each news item to one line
+- Make news current and tabloid worthy
+- Return exactly 15 items`,
+    tv: `Generate exactly 15 latest entertainment news items about Indian daily soap and TV industry actors from today. Each news item must be on a separate line in this exact format:
+[Person Name] - [Single line news description]
+
+Example:
+Hina Khan - Returns to popular TV show after break
+Rupali Ganguly - Show reaches 1000 episode milestone
+
+Requirements:
+- Use real, well-known Indian TV actors
+- Keep each news item to one line
+- Make news current and  tabloid worthy
+- Return exactly 15 items`,
+    hollywood: `Generate exactly 15 latest entertainment news items about American Hollywood actors and singers from today. Each news item must be on a separate line in this exact format:
+[Person Name] - [Single line news description]
+
+Example:
+Leonardo DiCaprio - Signs for climate change documentary
+Taylor Swift - Announces surprise album release
+
+Requirements:
+- Use real, well-known Hollywood celebrities
+- Keep each news item to one line
+- Make news current and  tabloid worthy
+- Return exactly 15 items`
   };
   const prompt = prompts[category];
-  if (!prompt) {
-    throw new Error(`Invalid category: ${category}`);
-  }
-  const body = JSON.stringify({
+  if (!prompt) throw new Error(`Invalid category: ${category}`);
+  const body = {
     contents: [
       {
         parts: [
@@ -58,76 +67,98 @@ async function fetchFromGemini(category) {
       temperature: 0.9,
       maxOutputTokens: 2048
     }
-  });
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`;
-  const response = await fetchWithRetry(url, {
-    method: 'POST',
+  };
+  const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`, {
+    method: "POST",
     headers: {
-      'Content-Type': 'application/json'
+      "Content-Type": "application/json"
     },
-    body
-  }, 2, 700);
-  if (!response.ok) {
-    const txt = await response.text().catch(()=>'<no body>');
-    throw new Error(`Gemini API error: ${response.status} ${response.statusText} - ${txt.slice(0, 500)}`);
-  }
-  const data = await response.json();
-  //console.info(`Gemini raw response sample for ${category}:`, safeSample(data));
-  // Try multiple paths to extract text
-  let assembled = '';
-  if (Array.isArray(data.candidates) && data.candidates.length > 0) {
+    body: JSON.stringify(body)
+  });
+  if (!resp.ok) throw new Error(`Gemini API error: ${resp.status} ${resp.statusText}`);
+  const data = await resp.json();
+  const extractTextFromCandidate = (candidate)=>{
+    if (!candidate) return "";
+    const parts = candidate?.content?.parts;
+    if (Array.isArray(parts)) {
+      const joined = parts.map((p)=>p?.text || "").join("\n");
+      if (joined.trim()) return joined;
+    }
+    if (typeof candidate?.content?.text === "string" && candidate.content.text.trim()) {
+      return candidate.content.text;
+    }
+    const msgParts = candidate?.content?.message?.content;
+    if (Array.isArray(msgParts)) {
+      const joined = msgParts.map((p)=>p?.text || "").join("\n");
+      if (joined.trim()) return joined;
+    }
+    return "";
+  };
+  const sanitize = (input)=>{
+    if (!input) return "";
+    let t = input.replace(/<style[\s\S]*?<\/style>/gi, " ");
+    t = t.replace(/<script[\s\S]*?<\/script>/gi, " ");
+    t = t.replace(/<[^>]+>/g, " ");
+    t = t.replace(/\b[a-z-]+:\s*[^;"']+;/gi, " ");
+    t = t.replace(/&nbsp;/gi, " ").replace(/&amp;/gi, "&").replace(/&lt;/gi, "<").replace(/&gt;/gi, ">");
+    t = t.replace(/\r\n|\r/g, "\n").replace(/\n{2,}/g, "\n").replace(/[ \t]{2,}/g, " ").trim();
+    return t;
+  };
+  let combinedText = "";
+  if (Array.isArray(data?.candidates) && data.candidates.length > 0) {
     for (const cand of data.candidates){
-      // content.parts[*].text
-      const parts = cand?.content?.parts;
-      if (Array.isArray(parts)) {
-        assembled += parts.map((p)=>p?.text || '').join('\n') + '\n';
-        continue;
-      }
-      // content.parts may be nested in other shapes
-      if (typeof cand?.content?.text === 'string') {
-        assembled += cand.content.text + '\n';
-        continue;
-      }
-      // fallback to groundingMetadata renderedContent
-      const rc = cand?.groundingMetadata?.searchEntryPoint?.renderedContent;
-      if (typeof rc === 'string') {
-        // strip tags
-        const stripped = rc.replace(/<[^>]+>/g, '\n').replace(/&nbsp;|&amp;/g, ' ');
-        assembled += stripped + '\n';
-        continue;
+      const txt = extractTextFromCandidate(cand);
+      if (txt) {
+        combinedText += txt + "\n";
       }
     }
   }
-  // As last resort, check top-level fields
-  if (!assembled && typeof data?.candidates?.[0]?.content?.role === 'string') {
-    // sometimes model returns structured content elsewhere
-    if (typeof data?.candidates?.[0]?.content?.message?.content?.[0]?.text === 'string') {
-      assembled = data.candidates[0].content.message.content[0].text;
-    }
+  if (!combinedText && data?.candidates?.[0]?.groundingMetadata?.searchEntryPoint?.renderedContent) {
+    combinedText = String(data.candidates[0].groundingMetadata.searchEntryPoint.renderedContent);
   }
-  assembled = assembled.trim();
-  if (!assembled) {
-    console.warn('No assembled text from Gemini response', safeSample(data));
+  if (!combinedText) {
+    const sample = JSON.stringify({
+      keys: Object.keys(data || {}).slice(0, 10),
+      candidatesLength: Array.isArray(data?.candidates) ? data.candidates.length : 0
+    });
+    console.warn("Gemini: no usable text found, response sample:", sample);
     return [];
   }
-  // normalize newlines and remove extra html
-  const text = assembled.replace(/\r/g, '').replace(/<br\s*\/?>/gi, '\n');
-  const lines = text.split(/\n+/).map((l)=>l.trim()).filter((l)=>l.length > 0);
-  const newsItems = [];
+  const cleaned = sanitize(combinedText);
+  const lines = cleaned.split("\n").map((l)=>l.trim()).filter((l)=>l.length > 0);
   const sepRegex = /^(?:\d+\.\s*)?(.+?)\s*(?:[-–—:|])\s*(.+)$/;
+  const newsItems = [];
   for (const line of lines){
     const match = line.match(sepRegex);
     if (match && newsItems.length < 15) {
       const [, personName, newsText] = match;
-      newsItems.push({
-        news_text: newsText.trim(),
-        person_name: personName.trim(),
-        search_query: `${personName.trim()} ${newsText.trim()}`
-      });
+      const pn = personName.trim();
+      const nt = newsText.trim();
+      if (pn.length > 0 && nt.length > 5) {
+        newsItems.push({
+          news_text: nt,
+          person_name: pn,
+          search_query: `${pn} ${nt}`
+        });
+      } else {
+        console.warn("Rejected parsed line as implausible:", {
+          line,
+          personName: pn,
+          newsText: nt
+        });
+      }
+    } else {
+      console.debug("Non-matching line (ignored):", line.length > 200 ? line.slice(0, 200) + "..." : line);
     }
+    if (newsItems.length >= 15) break;
   }
   if (newsItems.length === 0) {
-    console.warn('Parsed zero news items after normalization. Sample lines:', lines.slice(0, 10));
+    const sampleLines = lines.slice(0, 10).map((l)=>l.length > 200 ? l.slice(0, 200) + "..." : l);
+    console.warn("Parsed zero news items from Gemini. Cleaned sample lines:", sampleLines);
+    console.debug("Raw candidates sample:", JSON.stringify((data?.candidates || []).slice(0, 2).map((c)=>({
+        keys: Object.keys(c || {}).slice(0, 6),
+        textSnippet: String(c?.content?.parts?.[0]?.text || c?.content?.text || "").slice(0, 200)
+      })), null, 2));
   }
   return newsItems.slice(0, 15);
 }
@@ -154,7 +185,9 @@ async function fetchPersonImage(personName) {
         const randIndex = Math.floor(Math.random() * 15);
         const chosenPage = pages[randIndex] ?? pages[0];
         const info = chosenPage?.imageinfo?.[0];
-        if (info) return info.thumburl || info.url;
+        if (info) {
+          return info.thumburl || info.url;
+        }
       }
     }
   } catch (error) {
@@ -164,31 +197,25 @@ async function fetchPersonImage(personName) {
 }
 async function updateNewsForCategory(supabase, category) {
   try {
-    console.info(`Fetching news for ${category}...`);
+    console.log(`Fetching news for ${category}...`);
     const newsItems = await fetchFromGemini(category);
-    console.info(`Fetched ${newsItems.length} news items for ${category}`);
-    if (newsItems.length === 0) {
-      // capture a diagnostic event to logs to help debugging
-      console.warn(`Zero news items parsed for ${category} - will skip DB insert`);
-      return {
-        success: true,
-        count: 0
-      };
-    }
+    console.log(`Fetched ${newsItems.length} news items for ${category}`);
     const newsWithImages = await Promise.all(newsItems.map(async (item)=>({
         ...item,
         image_url: await fetchPersonImage(item.person_name),
         created_at: new Date().toISOString()
       })));
     const tableName = `${category}_news`;
-    const { data: delData, error: deleteError } = await supabase.from(tableName).delete().lt('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
-    if (deleteError) console.error(`Error clearing old news for ${category}:`, deleteError);
+    const { data, deleteError } = await supabase.from(tableName).delete().lt('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
+    if (deleteError) {
+      console.error(`Error clearing old news for ${category}:`, deleteError);
+    }
     const { error: insertError } = await supabase.from(tableName).insert(newsWithImages);
     if (insertError) {
       console.error(`Error inserting news for ${category}:`, insertError);
       throw insertError;
     }
-    console.info(`Successfully updated ${category} news with ${newsWithImages.length} items`);
+    console.log(`Successfully updated ${category} news`);
     return {
       success: true,
       count: newsWithImages.length
@@ -197,61 +224,68 @@ async function updateNewsForCategory(supabase, category) {
     console.error(`Error updating ${category} news:`, error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: error instanceof Error ? error.message : "Unknown error"
     };
   }
 }
 Deno.serve(async (req)=>{
-  if (req.method === 'OPTIONS') return new Response(null, {
-    status: 200,
-    headers: corsHeaders
-  });
+  if (req.method === "OPTIONS") {
+    return new Response(null, {
+      status: 200,
+      headers: corsHeaders
+    });
+  }
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    if (!supabaseUrl || !supabaseServiceKey) throw new Error('Supabase credentials not configured');
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (!supabaseUrl || !supabaseServiceKey) {
+      throw new Error("Supabase credentials not configured");
+    }
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     const results = await Promise.allSettled([
-      updateNewsForCategory(supabase, 'bollywood'),
-      updateNewsForCategory(supabase, 'tv'),
-      updateNewsForCategory(supabase, 'hollywood')
+      updateNewsForCategory(supabase, "bollywood"),
+      updateNewsForCategory(supabase, "tv"),
+      updateNewsForCategory(supabase, "hollywood")
     ]);
     const summary = results.map((result, index)=>{
       const category = [
-        'bollywood',
-        'tv',
-        'hollywood'
+        "bollywood",
+        "tv",
+        "hollywood"
       ][index];
-      if (result.status === 'fulfilled') return {
-        category,
-        ...result.value
-      };
-      return {
-        category,
-        success: false,
-        error: result.reason?.message || 'Unknown error'
-      };
+      if (result.status === "fulfilled") {
+        return {
+          category,
+          ...result.value
+        };
+      } else {
+        return {
+          category,
+          success: false,
+          error: result.reason?.message || "Unknown error"
+        };
+      }
     });
     return new Response(JSON.stringify({
-      message: 'News update completed',
+      message: "News update completed",
       results: summary,
       timestamp: new Date().toISOString()
     }), {
       status: 200,
       headers: {
         ...corsHeaders,
-        'Content-Type': 'application/json'
+        "Content-Type": "application/json"
       }
     });
   } catch (error) {
-    console.error('Error in news-scheduler function:', error);
+    console.error("Error in news-scheduler function:", error);
     return new Response(JSON.stringify({
-      error: error instanceof Error ? error.message : 'Internal server error'
+      error: error instanceof Error ? error.message : "Internal server error"
     }), {
       status: 500,
       headers: {
         ...corsHeaders,
-        'Content-Type': 'application/json'
+        "Content-Type": "application/json"
       }
     });
   }
