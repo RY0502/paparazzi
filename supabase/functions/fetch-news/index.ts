@@ -7,9 +7,11 @@ const corsHeaders = {
 };
 async function fetchFromGemini(category) {
   const geminiApiKey = Deno.env.get("GEMINI_API_KEY");
-  if (!geminiApiKey) throw new Error("GEMINI_API_KEY not configured");
+  if (!geminiApiKey) {
+    throw new Error("GEMINI_API_KEY not configured");
+  }
   const prompts = {
-    bollywood: `Generate exactly 15 latest entertainment news items about Indian Bollywood actors and singers from today. Each news item must be on a separate line in this exact format:
+    bollywood: `Generate exactly 15 latest entertainment news items about Indian Bollywood actors and singers trending currently. Each news item must be on a separate line in this exact format:
 [Person Name] - [Single line news description]
 
 Example:
@@ -21,7 +23,7 @@ Requirements:
 - Keep each news item to one line
 - Make news current and tabloid worthy
 - Return exactly 15 items`,
-    tv: `Generate exactly 15 latest entertainment news items about Indian daily soap and TV industry actors from today. Each news item must be on a separate line in this exact format:
+    tv: `Generate exactly 15 latest entertainment news items about Indian daily soap and TV industry actors trending currently. Each news item must be on a separate line in this exact format:
 [Person Name] - [Single line news description]
 
 Example:
@@ -33,7 +35,7 @@ Requirements:
 - Keep each news item to one line
 - Make news current and  tabloid worthy
 - Return exactly 15 items`,
-    hollywood: `Generate exactly 15 latest entertainment news items about American Hollywood actors and singers from today. Each news item must be on a separate line in this exact format:
+    hollywood: `Generate exactly 15 latest entertainment news items about American Hollywood actors and singers trending currently. Each news item must be on a separate line in this exact format:
 [Person Name] - [Single line news description]
 
 Example:
@@ -47,118 +49,53 @@ Requirements:
 - Return exactly 15 items`
   };
   const prompt = prompts[category];
-  if (!prompt) throw new Error(`Invalid category: ${category}`);
-  const body = {
-    contents: [
-      {
-        parts: [
-          {
-            text: prompt
-          }
-        ]
-      }
-    ],
-    tools: [
-      {
-        google_search: {}
-      }
-    ],
-    generationConfig: {
-      temperature: 0.9,
-      maxOutputTokens: 2048
-    }
-  };
-  const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`, {
+  if (!prompt) {
+    throw new Error(`Invalid category: ${category}`);
+  }
+  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
     },
-    body: JSON.stringify(body)
-  });
-  if (!resp.ok) throw new Error(`Gemini API error: ${resp.status} ${resp.statusText}`);
-  const data = await resp.json();
-  const extractTextFromCandidate = (candidate)=>{
-    if (!candidate) return "";
-    const parts = candidate?.content?.parts;
-    if (Array.isArray(parts)) {
-      const joined = parts.map((p)=>p?.text || "").join("\n");
-      if (joined.trim()) return joined;
-    }
-    if (typeof candidate?.content?.text === "string" && candidate.content.text.trim()) {
-      return candidate.content.text;
-    }
-    const msgParts = candidate?.content?.message?.content;
-    if (Array.isArray(msgParts)) {
-      const joined = msgParts.map((p)=>p?.text || "").join("\n");
-      if (joined.trim()) return joined;
-    }
-    return "";
-  };
-  const sanitize = (input)=>{
-    if (!input) return "";
-    let t = input.replace(/<style[\s\S]*?<\/style>/gi, " ");
-    t = t.replace(/<script[\s\S]*?<\/script>/gi, " ");
-    t = t.replace(/<[^>]+>/g, " ");
-    t = t.replace(/\b[a-z-]+:\s*[^;"']+;/gi, " ");
-    t = t.replace(/&nbsp;/gi, " ").replace(/&amp;/gi, "&").replace(/&lt;/gi, "<").replace(/&gt;/gi, ">");
-    t = t.replace(/\r\n|\r/g, "\n").replace(/\n{2,}/g, "\n").replace(/[ \t]{2,}/g, " ").trim();
-    return t;
-  };
-  let combinedText = "";
-  if (Array.isArray(data?.candidates) && data.candidates.length > 0) {
-    for (const cand of data.candidates){
-      const txt = extractTextFromCandidate(cand);
-      if (txt) {
-        combinedText += txt + "\n";
+    body: JSON.stringify({
+      contents: [
+        {
+          parts: [
+            {
+              text: prompt
+            }
+          ]
+        }
+      ],
+      tools: [
+        {
+          google_search: {}
+        }
+      ],
+      generationConfig: {
+        temperature: 0.9,
+        maxOutputTokens: 2048
       }
-    }
+    })
+  });
+  if (!response.ok) {
+    throw new Error(`Gemini API error: ${response.statusText}`);
   }
-  if (!combinedText && data?.candidates?.[0]?.groundingMetadata?.searchEntryPoint?.renderedContent) {
-    combinedText = String(data.candidates[0].groundingMetadata.searchEntryPoint.renderedContent);
-  }
-  if (!combinedText) {
-    const sample = JSON.stringify({
-      keys: Object.keys(data || {}).slice(0, 10),
-      candidatesLength: Array.isArray(data?.candidates) ? data.candidates.length : 0
-    });
-    console.warn("Gemini: no usable text found, response sample:", sample);
-    return [];
-  }
-  const cleaned = sanitize(combinedText);
-  const lines = cleaned.split("\n").map((l)=>l.trim()).filter((l)=>l.length > 0);
-  const sepRegex = /^(?:\d+\.\s*)?(.+?)\s*(?:[-–—:|])\s*(.+)$/;
+  const data = await response.json();
+  console.log(data);
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+  const lines = text.split("\n").filter((line)=>line.trim().length > 0);
   const newsItems = [];
   for (const line of lines){
-    const match = line.match(sepRegex);
+    const match = line.match(/^(?:\d+\.\s*)?(.+?)\s*[-–]\s*(.+)$/);
     if (match && newsItems.length < 15) {
       const [, personName, newsText] = match;
-      const pn = personName.trim();
-      const nt = newsText.trim();
-      if (pn.length > 0 && nt.length > 5) {
-        newsItems.push({
-          news_text: nt,
-          person_name: pn,
-          search_query: `${pn} ${nt}`
-        });
-      } else {
-        console.warn("Rejected parsed line as implausible:", {
-          line,
-          personName: pn,
-          newsText: nt
-        });
-      }
-    } else {
-      console.debug("Non-matching line (ignored):", line.length > 200 ? line.slice(0, 200) + "..." : line);
+      newsItems.push({
+        news_text: newsText.trim(),
+        person_name: personName.trim(),
+        search_query: `${personName.trim()} ${newsText.trim()}`
+      });
     }
-    if (newsItems.length >= 15) break;
-  }
-  if (newsItems.length === 0) {
-    const sampleLines = lines.slice(0, 10).map((l)=>l.length > 200 ? l.slice(0, 200) + "..." : l);
-    console.warn("Parsed zero news items from Gemini. Cleaned sample lines:", sampleLines);
-    console.debug("Raw candidates sample:", JSON.stringify((data?.candidates || []).slice(0, 2).map((c)=>({
-        keys: Object.keys(c || {}).slice(0, 6),
-        textSnippet: String(c?.content?.parts?.[0]?.text || c?.content?.text || "").slice(0, 200)
-      })), null, 2));
   }
   return newsItems.slice(0, 15);
 }
@@ -169,7 +106,7 @@ async function fetchPersonImage(personName) {
       generator: 'search',
       gsrsearch: personName,
       gsrnamespace: '6',
-      gsrlimit: '10',
+      gsrlimit: '15',
       prop: 'imageinfo',
       iiprop: 'url',
       iiurlwidth: '800',
@@ -182,7 +119,9 @@ async function fetchPersonImage(personName) {
       const data = await response.json();
       if (data.query && data.query.pages) {
         const pages = Object.values(data.query.pages);
-        const randIndex = Math.floor(Math.random() * 10);
+        // generate random integer between 0 and 15 inclusive
+        const randIndex = Math.floor(Math.random() * 15); // 0..14
+        // choose page at random index if it exists, otherwise fallback to first
         const chosenPage = pages[randIndex] ?? pages[0];
         const info = chosenPage?.imageinfo?.[0];
         if (info) {
