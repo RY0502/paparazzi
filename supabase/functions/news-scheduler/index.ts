@@ -169,7 +169,7 @@ async function fetchPersonImage(personName) {
       generator: 'search',
       gsrsearch: personName,
       gsrnamespace: '6',
-      gsrlimit: '15',
+      gsrlimit: '10',
       prop: 'imageinfo',
       iiprop: 'url',
       iiurlwidth: '800',
@@ -182,7 +182,7 @@ async function fetchPersonImage(personName) {
       const data = await response.json();
       if (data.query && data.query.pages) {
         const pages = Object.values(data.query.pages);
-        const randIndex = Math.floor(Math.random() * 15);
+        const randIndex = Math.floor(Math.random() * 10);
         const chosenPage = pages[randIndex] ?? pages[0];
         const info = chosenPage?.imageinfo?.[0];
         if (info) {
