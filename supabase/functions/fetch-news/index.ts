@@ -11,7 +11,7 @@ async function fetchFromGemini(category) {
     throw new Error("GEMINI_API_KEY not configured");
   }
   const prompts = {
-    bollywood: `Generate exactly 15 latest entertainment news items about Indian Bollywood actors and singers trending currently. Each news item must be on a separate line in this exact format:
+    bollywood: `Using ONLY real-time web results get exactly 15 latest entertainment news items about Indian Bollywood actors and singers trending from the past 24 hours. Each news item must be on a separate line in this exact format:
 [Person Name] - [Single line news description]
 
 Example:
@@ -23,7 +23,7 @@ Requirements:
 - Keep each news item to one line
 - Make news current and tabloid worthy
 - Return exactly 15 items`,
-    tv: `Generate exactly 15 latest entertainment news items about Indian daily soap and TV industry actors trending currently. Each news item must be on a separate line in this exact format:
+    tv: `Using ONLY real-time web results get exactly 15 latest entertainment news items about Indian daily soap and TV industry actors trending from the past 24 hours. Each news item must be on a separate line in this exact format:
 [Person Name] - [Single line news description]
 
 Example:
@@ -35,7 +35,7 @@ Requirements:
 - Keep each news item to one line
 - Make news current and  tabloid worthy
 - Return exactly 15 items`,
-    hollywood: `Generate exactly 15 latest entertainment news items about American Hollywood actors and singers trending currently. Each news item must be on a separate line in this exact format:
+    hollywood: `Using ONLY real-time web results get exactly 15 latest entertainment news items about American Hollywood actors and singers trending from the past 24 hours. Each news item must be on a separate line in this exact format:
 [Person Name] - [Single line news description]
 
 Example:
