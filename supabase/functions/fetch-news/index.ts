@@ -82,7 +82,7 @@ Requirements:
     throw new Error(`Gemini API error: ${response.statusText}`);
   }
   const data = await response.json();
-  console.log(data);
+  //console.log(data);
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
   const lines = text.split("\n").filter((line)=>line.trim().length > 0);
   const newsItems = [];
