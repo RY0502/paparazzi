@@ -145,7 +145,7 @@ async function updateNewsForCategory(supabase, category) {
         created_at: new Date().toISOString()
       })));
     const tableName = `${category}_news`;
-    const { data, deleteError } = await supabase.from(tableName).delete().lt('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
+    const { data, deleteError } = await supabase.from(tableName).delete().lt('created_at', new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString());
     if (deleteError) {
       console.error(`Error clearing old news for ${category}:`, deleteError);
     }
