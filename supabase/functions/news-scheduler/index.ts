@@ -84,9 +84,9 @@ Requirements:
   const data = await response.json();
   //console.log(data);
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-  const lines = text.split("\n").filter((line)=>line.trim().length > 0);
+  const lines = text.split("\n").filter((line) => line.trim().length > 0);
   const newsItems = [];
-  for (const line of lines){
+  for (const line of lines) {
     const match = line.match(/^(?:\d+\.\s*)?(.+?)\s*[-–]\s*(.+)$/);
     if (match && newsItems.length < 15) {
       const [, personName, newsText] = match;
@@ -99,7 +99,7 @@ Requirements:
   }
   return newsItems.slice(0, 15);
 }
-async function fetchPersonImage(personName) {
+async function fetchPersonImage(personName: string) {
   try {
     const params = new URLSearchParams({
       action: 'query',
@@ -113,25 +113,83 @@ async function fetchPersonImage(personName) {
       format: 'json',
       origin: '*'
     });
+
     const url = `https://commons.wikimedia.org/w/api.php?${params.toString()}`;
     const response = await fetch(url);
+
     if (response.ok) {
       const data = await response.json();
       if (data.query && data.query.pages) {
         const pages = Object.values(data.query.pages);
-        // generate random integer between 0 and 15 inclusive
-        const randIndex = Math.floor(Math.random() * 15); // 0..14
-        // choose page at random index if it exists, otherwise fallback to first
-        const chosenPage = pages[randIndex] ?? pages[0];
-        const info = chosenPage?.imageinfo?.[0];
-        if (info) {
-          return info.thumburl || info.url;
+
+        // Helper: Check if URL is valid (not PDF, not document)
+        const isValidImageUrl = (imageUrl: any) => {
+          if (!imageUrl) return false;
+          const urlLower = imageUrl.toLowerCase();
+
+          // CRITICAL: Reject PDFs (even if rendered as .jpg)
+          if (urlLower.includes('.pdf')) return false;
+
+          // Reject other document types
+          if (urlLower.match(/\.(doc|docx|txt|odt|rtf)/)) return false;
+
+          // Must be actual image format
+          if (!urlLower.match(/\.(jpg|jpeg|png|gif|webp)$/)) return false;
+
+          return true;
+        };
+
+        // Helper: Check if filename contains person's name
+        const filenameMatchesPerson = (imageUrl: any, personName: string) => {
+          if (!imageUrl) return false;
+          const filename = imageUrl.toLowerCase();
+          const nameParts = personName.toLowerCase().split(' ');
+
+          // Check if filename contains any part of the person's name (min 3 chars)
+          return nameParts.some((part: string) => part.length > 2 && filename.includes(part));
+        };
+
+        // Try up to 3 random images
+        const maxAttempts = Math.min(3, pages.length);
+        const triedIndices = new Set();
+
+        for (let attempt = 0; attempt < maxAttempts; attempt++) {
+          // Pick random index we haven't tried yet
+          let randomIndex;
+          do {
+            randomIndex = Math.floor(Math.random() * pages.length);
+          } while (triedIndices.has(randomIndex));
+
+          triedIndices.add(randomIndex);
+
+          const page = pages[randomIndex];
+          const info = (page as any)?.imageinfo?.[0];
+          const imageUrl = info?.thumburl || info?.url;
+
+          // Check if URL is valid and matches person name
+          if (isValidImageUrl(imageUrl) && filenameMatchesPerson(imageUrl, personName)) {
+            console.log(`Selected image for ${personName}: ${imageUrl}`);
+            return imageUrl;
+          }
         }
+
+        // If all 3 attempts failed, use the 0th image (first result)
+        const firstPage = pages[0];
+        const firstInfo = firstPage?.imageinfo?.[0];
+        const firstImageUrl = firstInfo?.thumburl || firstInfo?.url;
+
+        if (firstImageUrl && isValidImageUrl(firstImageUrl)) {
+          console.log(`Using first image for ${personName}: ${firstImageUrl}`);
+          return firstImageUrl;
+        }
+
+        console.warn(`No valid images found for ${personName}, using fallback`);
       }
     }
   } catch (error) {
     console.error(`Error fetching image for ${personName}:`, error);
   }
+
   return `https://images.pexels.com/photos/1065084/pexels-photo-1065084.jpeg?auto=compress&cs=tinysrgb&w=800`;
 }
 async function updateNewsForCategory(supabase, category) {
@@ -139,11 +197,11 @@ async function updateNewsForCategory(supabase, category) {
     console.log(`Fetching news for ${category}...`);
     const newsItems = await fetchFromGemini(category);
     console.log(`Fetched ${newsItems.length} news items for ${category}`);
-    const newsWithImages = await Promise.all(newsItems.map(async (item)=>({
-        ...item,
-        image_url: await fetchPersonImage(item.person_name),
-        created_at: new Date().toISOString()
-      })));
+    const newsWithImages = await Promise.all(newsItems.map(async (item) => ({
+      ...item,
+      image_url: await fetchPersonImage(item.person_name),
+      created_at: new Date().toISOString()
+    })));
     const tableName = `${category}_news`;
     const { data, deleteError } = await supabase.from(tableName).delete().lt('created_at', new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString());
     if (deleteError) {
@@ -167,7 +225,7 @@ async function updateNewsForCategory(supabase, category) {
     };
   }
 }
-Deno.serve(async (req)=>{
+Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, {
       status: 200,
@@ -186,7 +244,7 @@ Deno.serve(async (req)=>{
       updateNewsForCategory(supabase, "tv"),
       updateNewsForCategory(supabase, "hollywood")
     ]);
-    const summary = results.map((result, index)=>{
+    const summary = results.map((result, index) => {
       const category = [
         "bollywood",
         "tv",
