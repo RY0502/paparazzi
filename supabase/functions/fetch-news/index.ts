@@ -5,12 +5,17 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey"
 };
-async function fetchFromGemini(category) {
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function fetchFromGemini(category: string) {
   const geminiApiKey = Deno.env.get("GEMINI_API_KEY");
   if (!geminiApiKey) {
     throw new Error("GEMINI_API_KEY not configured");
   }
-  const prompts = {
+  const prompts: Record<string, string> = {
     bollywood: `Using ONLY real-time web results get exactly 15 latest entertainment news items about Indian Bollywood actors and singers trending from the past 24 hours. Each news item must be on a separate line in this exact format:
 [Person Name] - [Single line news description]
 
@@ -45,61 +50,99 @@ Taylor Swift - Announces surprise album release
 Requirements:
 - Use real, well-known Hollywood celebrities
 - Keep each news item to one line
-- Make news current and  tabloid worthy
+- Make news current and tabloid worthy
 - Return exactly 15 items`
   };
   const prompt = prompts[category];
   if (!prompt) {
     throw new Error(`Invalid category: ${category}`);
   }
-  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      contents: [
-        {
-          parts: [
-            {
-              text: prompt
-            }
-          ]
-        }
-      ],
-      tools: [
-        {
-          google_search: {}
-        }
-      ],
-      generationConfig: {
-        temperature: 0.9,
-        maxOutputTokens: 2048
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`;
+  const bodyPayload = {
+    contents: [
+      {
+        parts: [
+          {
+            text: prompt
+          }
+        ]
       }
-    })
-  });
-  if (!response.ok) {
-    throw new Error(`Gemini API error: ${response.statusText}`);
-  }
-  const data = await response.json();
-  //console.log(data);
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-  const lines = text.split("\n").filter((line)=>line.trim().length > 0);
-  const newsItems = [];
-  for (const line of lines){
-    const match = line.match(/^(?:\d+\.\s*)?(.+?)\s*[-–]\s*(.+)$/);
-    if (match && newsItems.length < 15) {
-      const [, personName, newsText] = match;
-      newsItems.push({
-        news_text: newsText.trim(),
-        person_name: personName.trim(),
-        search_query: `${personName.trim()} ${newsText.trim()}`
+    ],
+    tools: [
+      {
+        google_search: {}
+      }
+    ],
+    generationConfig: {
+      temperature: 0.9,
+      maxOutputTokens: 2048
+    }
+  };
+
+  const maxAttempts = 3; // initial attempt + 2 retries
+  const retryDelayMs = 5000; // 5 seconds
+
+  let lastError: any = null;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(bodyPayload)
       });
+
+      if (!response.ok) {
+        const text = await response.text().catch(() => null);
+        lastError = new Error(`Gemini API error: ${response.status} ${response.statusText} ${text ? `- ${text}` : ""}`);
+        // If not last attempt, wait then retry
+        if (attempt < maxAttempts) {
+          console.warn(`Gemini request failed (attempt ${attempt}/${maxAttempts}). Retrying in ${retryDelayMs}ms...`, lastError);
+          await sleep(retryDelayMs);
+          continue;
+        } else {
+          // last attempt failed
+          throw lastError;
+        }
+      }
+
+      // success
+      const data = await response.json();
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+      const lines = text.split("\n").filter((line: string) => line.trim().length > 0);
+      const newsItems: { news_text: string; person_name: string; search_query: string }[] = [];
+      for (const line of lines) {
+        const match = line.match(/^(?:\d+\.\s*)?(.+?)\s*[-–]\s*(.+)$/);
+        if (match && newsItems.length < 15) {
+          const [, personName, newsText] = match;
+          newsItems.push({
+            news_text: newsText.trim(),
+            person_name: personName.trim(),
+            search_query: `${personName.trim()} ${newsText.trim()}`
+          });
+        }
+      }
+      return newsItems.slice(0, 15);
+    } catch (err) {
+      lastError = err;
+      if (attempt < maxAttempts) {
+        console.warn(`Gemini request error (attempt ${attempt}/${maxAttempts}):`, err, `Retrying in ${retryDelayMs}ms...`);
+        await sleep(retryDelayMs);
+        continue;
+      } else {
+        console.error(`Gemini request failed after ${maxAttempts} attempts:`, err);
+        throw err;
+      }
     }
   }
-  return newsItems.slice(0, 15);
+
+  // If somehow falls through, throw last error
+  throw lastError || new Error("Unknown error calling Gemini API");
 }
-async function fetchPersonImage(personName) {
+
+async function fetchPersonImage(personName: string) {
   try {
     const params = new URLSearchParams({
       action: 'query',
@@ -120,7 +163,7 @@ async function fetchPersonImage(personName) {
       if (data.query && data.query.pages) {
         const pages = Object.values(data.query.pages);
         // Helper: Check if URL is valid (not PDF, not document)
-        const isValidImageUrl = (imageUrl)=>{
+        const isValidImageUrl = (imageUrl: any) => {
           if (!imageUrl) return false;
           const urlLower = imageUrl.toLowerCase();
           // CRITICAL: Reject PDFs (even if rendered as .jpg)
@@ -132,38 +175,36 @@ async function fetchPersonImage(personName) {
           return true;
         };
         // Helper: Check if filename contains person's name
-        const filenameMatchesPerson = (imageUrl, personName)=>{
+        const filenameMatchesPerson = (imageUrl: any, personName: string) => {
           if (!imageUrl) return false;
           const filename = imageUrl.toLowerCase();
           const nameParts = personName.toLowerCase().split(' ');
           // Check if filename contains any part of the person's name (min 3 chars)
-          return nameParts.some((part)=>part.length > 2 && filename.includes(part));
+          return nameParts.some((part) => part.length > 2 && filename.includes(part));
         };
         // Try up to 3 random images
         const maxAttempts = Math.min(3, pages.length);
-        const triedIndices = new Set();
-        for(let attempt = 0; attempt < maxAttempts; attempt++){
+        const triedIndices = new Set<number>();
+        for (let attempt = 0; attempt < maxAttempts; attempt++) {
           // Pick random index we haven't tried yet
-          let randomIndex;
+          let randomIndex: number;
           do {
             randomIndex = Math.floor(Math.random() * pages.length);
-          }while (triedIndices.has(randomIndex))
+          } while (triedIndices.has(randomIndex));
           triedIndices.add(randomIndex);
-          const page = pages[randomIndex];
+          const page: any = pages[randomIndex];
           const info = page?.imageinfo?.[0];
           const imageUrl = info?.thumburl || info?.url;
           // Check if URL is valid and matches person name
           if (isValidImageUrl(imageUrl) && filenameMatchesPerson(imageUrl, personName)) {
-           // console.log(`Selected image for ${personName}: ${imageUrl}`);
             return imageUrl;
           }
         }
         // If all 3 attempts failed, use the 0th image (first result)
-        const firstPage = pages[0];
+        const firstPage: any = pages[0];
         const firstInfo = firstPage?.imageinfo?.[0];
         const firstImageUrl = firstInfo?.thumburl || firstInfo?.url;
         if (firstImageUrl && isValidImageUrl(firstImageUrl)) {
-        //  console.log(`Using first image for ${personName}: ${firstImageUrl}`);
           return firstImageUrl;
         }
         console.warn(`No valid images found for ${personName}, using fallback`);
@@ -174,16 +215,17 @@ async function fetchPersonImage(personName) {
   }
   return `https://images.pexels.com/photos/1065084/pexels-photo-1065084.jpeg?auto=compress&cs=tinysrgb&w=800`;
 }
-async function updateNewsForCategory(supabase, category) {
+
+async function updateNewsForCategory(supabase: any, category: string) {
   try {
     console.log(`Fetching news for ${category}...`);
     const newsItems = await fetchFromGemini(category);
     console.log(`Fetched ${newsItems.length} news items for ${category}`);
-    const newsWithImages = await Promise.all(newsItems.map(async (item)=>({
-        ...item,
-        image_url: await fetchPersonImage(item.person_name),
-        created_at: new Date().toISOString()
-      })));
+    const newsWithImages = await Promise.all(newsItems.map(async (item) => ({
+      ...item,
+      image_url: await fetchPersonImage(item.person_name),
+      created_at: new Date().toISOString()
+    })));
     const tableName = `${category}_news`;
     const { data, deleteError } = await supabase.from(tableName).delete().lt('created_at', new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString());
     if (deleteError) {
@@ -207,7 +249,8 @@ async function updateNewsForCategory(supabase, category) {
     };
   }
 }
-Deno.serve(async (req)=>{
+
+Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, {
       status: 200,
@@ -226,7 +269,7 @@ Deno.serve(async (req)=>{
       updateNewsForCategory(supabase, "tv"),
       updateNewsForCategory(supabase, "hollywood")
     ]);
-    const summary = results.map((result, index)=>{
+    const summary = results.map((result, index) => {
       const category = [
         "bollywood",
         "tv",
