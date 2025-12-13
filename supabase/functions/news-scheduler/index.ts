@@ -158,62 +158,96 @@ async function fetchPersonImage(personName: string) {
     });
     const url = `https://commons.wikimedia.org/w/api.php?${params.toString()}`;
     const response = await fetch(url);
-    if (response.ok) {
-      const data = await response.json();
-      if (data.query && data.query.pages) {
-        const pages = Object.values(data.query.pages);
-        // Helper: Check if URL is valid (not PDF, not document)
-        const isValidImageUrl = (imageUrl: any) => {
-          if (!imageUrl) return false;
-          const urlLower = imageUrl.toLowerCase();
-          // CRITICAL: Reject PDFs (even if rendered as .jpg)
-          if (urlLower.includes('.pdf')) return false;
-          // Reject other document types
-          if (urlLower.match(/\.(doc|docx|txt|odt|rtf)/)) return false;
-          // Must be actual image format
-          if (!urlLower.match(/\.(jpg|jpeg|png|gif|webp)$/)) return false;
-          return true;
-        };
-        // Helper: Check if filename contains person's name
-        const filenameMatchesPerson = (imageUrl: any, personName: string) => {
-          if (!imageUrl) return false;
-          const filename = imageUrl.toLowerCase();
-          const nameParts = personName.toLowerCase().split(' ');
-          // Check if filename contains any part of the person's name (min 3 chars)
-          return nameParts.some((part) => part.length > 2 && filename.includes(part));
-        };
-        // Try up to 3 random images
-        const maxAttempts = Math.min(3, pages.length);
-        const triedIndices = new Set<number>();
-        for (let attempt = 0; attempt < maxAttempts; attempt++) {
-          // Pick random index we haven't tried yet
-          let randomIndex: number;
-          do {
-            randomIndex = Math.floor(Math.random() * pages.length);
-          } while (triedIndices.has(randomIndex));
-          triedIndices.add(randomIndex);
-          const page: any = pages[randomIndex];
-          const info = page?.imageinfo?.[0];
-          const imageUrl = info?.thumburl || info?.url;
-          // Check if URL is valid and matches person name
-          if (isValidImageUrl(imageUrl) && filenameMatchesPerson(imageUrl, personName)) {
-            return imageUrl;
-          }
-        }
-        // If all 3 attempts failed, use the 0th image (first result)
-        const firstPage: any = pages[0];
-        const firstInfo = firstPage?.imageinfo?.[0];
-        const firstImageUrl = firstInfo?.thumburl || firstInfo?.url;
-        if (firstImageUrl && isValidImageUrl(firstImageUrl)) {
-          return firstImageUrl;
-        }
-        console.warn(`No valid images found for ${personName}, using fallback`);
+    if (!response.ok) {
+      console.warn(`Wikimedia API returned non-OK status ${response.status} for ${personName}`);
+      return FALLBACK_IMAGE();
+    }
+
+    const data = await response.json();
+    if (!data.query || !data.query.pages) {
+      console.warn(`Wikimedia API returned no pages for ${personName}`);
+      return FALLBACK_IMAGE();
+    }
+
+    const pages = Object.values<any>(data.query.pages);
+    if (pages.length === 0) {
+      console.warn(`Wikimedia returned empty pages array for ${personName}`);
+      return FALLBACK_IMAGE();
+    }
+
+    // Helper: Check if URL is valid (not PDF, not document). Allow svg
+    const isValidImageUrl = (imageUrl: any) => {
+      if (!imageUrl) return false;
+      const urlLower = String(imageUrl).toLowerCase();
+      // Reject PDF or document types
+      if (urlLower.includes('.pdf')) return false;
+      if (urlLower.match(/\.(doc|docx|txt|odt|rtf)/)) return false;
+      // Accept common image formats including svg
+      if (urlLower.match(/\.(jpg|jpeg|png|gif|webp|svg)(\?|$)/)) return true;
+      // Accept some Wikimedia thumb URLs that may not end with ext but contain /thumb/
+      if (urlLower.includes('/thumb/')) return true;
+      return false;
+    };
+
+    // Helper: soft match filename to person's name (not mandatory)
+    const filenameMatchesPerson = (imageUrl: any, personName: string) => {
+      if (!imageUrl) return false;
+      const filename = String(imageUrl).toLowerCase();
+      const nameParts = personName.toLowerCase().split(/\s+/).filter(p => p.length > 2);
+      if (nameParts.length === 0) return false;
+      // Score: return true if at least one strong part is present
+      return nameParts.some(part => filename.includes(part));
+    };
+
+    // Collect candidate image URLs (thumburl preferred)
+    const candidates: string[] = [];
+    for (const page of pages) {
+      const info = page?.imageinfo?.[0];
+      const imageUrl = info?.thumburl || info?.url;
+      if (imageUrl && isValidImageUrl(imageUrl)) {
+        candidates.push(imageUrl);
       }
     }
+
+    if (candidates.length === 0) {
+      console.warn(`No valid candidate image URLs for ${personName}`);
+      return FALLBACK_IMAGE();
+    }
+
+    // Prefer a candidate whose filename matches person name
+    const matched = candidates.find(c => filenameMatchesPerson(c, personName));
+    if (matched) {
+      // console.log(`Selected matched image for ${personName}: ${matched}`);
+      return matched;
+    }
+
+    // If no filename match, try up to 3 random candidates, otherwise pick first
+    const maxAttempts = Math.min(3, candidates.length);
+    const tried = new Set<number>();
+    for (let i = 0; i < maxAttempts; i++) {
+      let idx: number;
+      do {
+        idx = Math.floor(Math.random() * candidates.length);
+      } while (tried.has(idx) && tried.size < candidates.length);
+      tried.add(idx);
+      const candidate = candidates[idx];
+      // accept candidate (we already filtered by isValidImageUrl)
+      // console.log(`Selected random image for ${personName}: ${candidate}`);
+      return candidate;
+    }
+
+    // fallback to first candidate (shouldn't usually reach here)
+    // console.log(`Using first candidate image for ${personName}: ${candidates[0]}`);
+    return candidates[0];
   } catch (error) {
     console.error(`Error fetching image for ${personName}:`, error);
+    return FALLBACK_IMAGE();
   }
-  return `https://images.pexels.com/photos/1065084/pexels-photo-1065084.jpeg?auto=compress&cs=tinysrgb&w=800`;
+
+  // fallback helper
+  function FALLBACK_IMAGE() {
+    return 'https://images.pexels.com/photos/1065084/pexels-photo-1065084.jpeg?auto=compress&cs=tinysrgb&w=800';
+  }
 }
 
 async function updateNewsForCategory(supabase: any, category: string) {
