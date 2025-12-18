@@ -10,11 +10,87 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function fetchFromGemini(category: string) {
-  const geminiApiKey = Deno.env.get("GEMINI_API_KEY");
-  if (!geminiApiKey) {
-    throw new Error("GEMINI_API_KEY not configured");
+function randomJitter(baseMs: number) {
+  const jitter = baseMs * 0.3;
+  return Math.max(0, baseMs + (Math.random() * jitter * 2 - jitter));
+}
+
+// Fetch a per-category Gemini API key by calling the URL stored in env.
+// The URL is expected to return JSON where keys[0].vault_keys.decrypted_value contains the key.
+// Retries up to 3 attempts (initial + 2 retries) with exponential backoff + jitter.
+async function fetchGeminiKeyFromUrl(envUrlVar: string) {
+  const url = Deno.env.get(envUrlVar);
+  if (!url) {
+    throw new Error(`${envUrlVar} not configured`);
   }
+
+  const MAX_ATTEMPTS = 3;
+  const BASE_DELAY_MS = 500; // base backoff
+  let lastErr: any = null;
+
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      const controller = new AbortController();
+      const timeoutMs = 5000;
+      const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+      const res = await fetch(url, { method: "GET", signal: controller.signal });
+      clearTimeout(timeout);
+
+      if (!res.ok) {
+        const txt = await res.text().catch(() => "");
+        lastErr = new Error(`Key fetch returned ${res.status} ${res.statusText} ${txt ? `- ${txt.slice(0, 200)}` : ""}`);
+        if (attempt < MAX_ATTEMPTS) {
+          const wait = randomJitter(BASE_DELAY_MS * Math.pow(2, attempt - 1));
+          await sleep(wait);
+          continue;
+        } else {
+          throw lastErr;
+        }
+      }
+
+      const data = await res.json().catch(() => null);
+      if (!data || !Array.isArray(data.keys) || data.keys.length === 0) {
+        lastErr = new Error("Key response missing keys array or empty");
+        if (attempt < MAX_ATTEMPTS) {
+          const wait = randomJitter(BASE_DELAY_MS * Math.pow(2, attempt - 1));
+          await sleep(wait);
+          continue;
+        } else {
+          throw lastErr;
+        }
+      }
+
+      const vault = data.keys[0]?.vault_keys;
+      const decrypted = vault?.decrypted_value;
+      if (!decrypted) {
+        lastErr = new Error("Missing keys[0].vault_keys.decrypted_value in key response");
+        if (attempt < MAX_ATTEMPTS) {
+          const wait = randomJitter(BASE_DELAY_MS * Math.pow(2, attempt - 1));
+          await sleep(wait);
+          continue;
+        } else {
+          throw lastErr;
+        }
+      }
+
+      return String(decrypted);
+    } catch (err) {
+      lastErr = err;
+      if (attempt < MAX_ATTEMPTS) {
+        const wait = randomJitter(BASE_DELAY_MS * Math.pow(2, attempt - 1));
+        await sleep(wait);
+        continue;
+      } else {
+        throw lastErr;
+      }
+    }
+  }
+
+  throw lastErr || new Error("Failed to fetch Gemini key");
+}
+
+async function fetchFromGeminiWithKey(category: string, geminiApiKey: string) {
   const prompts: Record<string, string> = {
     bollywood: `Using ONLY real-time web results get exactly 15 latest entertainment news items about Indian Bollywood actors and singers trending from the past 24 hours. Each news item must be on a separate line in this exact format:
 [Person Name] - [Single line news description]
@@ -53,12 +129,13 @@ Requirements:
 - Make news current and tabloid worthy
 - Return exactly 15 items`
   };
+
   const prompt = prompts[category];
   if (!prompt) {
     throw new Error(`Invalid category: ${category}`);
   }
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(geminiApiKey)}`;
   const bodyPayload = {
     contents: [
       {
@@ -80,9 +157,8 @@ Requirements:
     }
   };
 
-  const maxAttempts = 3; // initial attempt + 2 retries
-  const retryDelayMs = 5000; // 5 seconds
-
+  const maxAttempts = 3;
+  const retryDelayMs = 5000;
   let lastError: any = null;
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
@@ -97,18 +173,15 @@ Requirements:
       if (!response.ok) {
         const text = await response.text().catch(() => null);
         lastError = new Error(`Gemini API error: ${response.status} ${response.statusText} ${text ? `- ${text}` : ""}`);
-        // If not last attempt, wait then retry
         if (attempt < maxAttempts) {
           console.warn(`Gemini request failed (attempt ${attempt}/${maxAttempts}). Retrying in ${retryDelayMs}ms...`, lastError);
           await sleep(retryDelayMs);
           continue;
         } else {
-          // last attempt failed
           throw lastError;
         }
       }
 
-      // success
       const data = await response.json();
       const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
       const lines = text.split("\n").filter((line: string) => line.trim().length > 0);
@@ -137,114 +210,168 @@ Requirements:
       }
     }
   }
-
-  // If somehow falls through, throw last error
   throw lastError || new Error("Unknown error calling Gemini API");
 }
 
+async function fetchFromGemini(category: string) {
+  // Determine which env var to use for the key URL
+  const map: Record<string, string> = {
+    bollywood: "BOLLYWOOD_URL_KEY",
+    tv: "TV_URL_KEY",
+    hollywood: "HOLLYWOOD_URL_KEY"
+  };
+  const envVar = map[category];
+  if (!envVar) throw new Error(`No key URL mapping for category ${category}`);
+
+  // Fetch the key (with retries inside the helper)
+  const geminiKey = await fetchGeminiKeyFromUrl(envVar);
+  return fetchFromGeminiWithKey(category, geminiKey);
+}
+
 async function fetchPersonImage(personName: string) {
-  try {
-    const params = new URLSearchParams({
-      action: 'query',
-      generator: 'search',
-      gsrsearch: personName,
-      gsrnamespace: '6',
-      gsrlimit: '15',
-      prop: 'imageinfo',
-      iiprop: 'url',
-      iiurlwidth: '800',
-      format: 'json',
-      origin: '*'
-    });
-    const url = `https://commons.wikimedia.org/w/api.php?${params.toString()}`;
-    const response = await fetch(url);
-    if (!response.ok) {
-      console.warn(`Wikimedia API returned non-OK status ${response.status} for ${personName}`);
-      return FALLBACK_IMAGE();
+  // Read Wikimedia env variables
+  const WIKIMEDIA_ACCESS_TOKEN = Deno.env.get("WIKIMEDIA_ACCESS_TOKEN") || "";
+  const WIKIMEDIA_APP_NAME = Deno.env.get("WIKIMEDIA_APP_NAME") || "";
+  const WIKIMEDIA_REFERER = Deno.env.get("WIKIMEDIA_REFERER") || "";
+
+  const params = new URLSearchParams({
+    action: 'query',
+    generator: 'search',
+    gsrsearch: personName,
+    gsrnamespace: '6',
+    gsrlimit: '15',
+    prop: 'imageinfo',
+    iiprop: 'url',
+    iiurlwidth: '800',
+    format: 'json',
+    origin: '*'
+  });
+  const url = `https://commons.wikimedia.org/w/api.php?${params.toString()}`;
+
+  // Fetch configuration
+  const WM_FETCH_TIMEOUT_MS = 10000;
+  const WM_MAX_RETRIES = 5;
+  const WM_BASE_RETRY_MS = 1000;
+
+  let attempt = 0;
+  let lastErr: any = null;
+  while (attempt < WM_MAX_RETRIES) {
+    attempt++;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), WM_FETCH_TIMEOUT_MS);
+
+    if (attempt > 1) {
+      const backoff = randomJitter(WM_BASE_RETRY_MS * Math.pow(2, attempt - 2));
+      await sleep(backoff);
     }
 
-    const data = await response.json();
-    if (!data.query || !data.query.pages) {
-      console.warn(`Wikimedia API returned no pages for ${personName}`);
-      return FALLBACK_IMAGE();
-    }
-
-    const pages = Object.values<any>(data.query.pages);
-    if (pages.length === 0) {
-      console.warn(`Wikimedia returned empty pages array for ${personName}`);
-      return FALLBACK_IMAGE();
-    }
-
-    // Helper: Check if URL is valid (not PDF, not document). Allow svg
-    const isValidImageUrl = (imageUrl: any) => {
-      if (!imageUrl) return false;
-      const urlLower = String(imageUrl).toLowerCase();
-      // Reject PDF or document types
-      if (urlLower.includes('.pdf')) return false;
-      if (urlLower.match(/\.(doc|docx|txt|odt|rtf)/)) return false;
-      // Accept common image formats including svg
-      if (urlLower.match(/\.(jpg|jpeg|png|gif|webp|svg)(\?|$)/)) return true;
-      // Accept some Wikimedia thumb URLs that may not end with ext but contain /thumb/
-      if (urlLower.includes('/thumb/')) return true;
-      return false;
-    };
-
-    // Helper: soft match filename to person's name (not mandatory)
-    const filenameMatchesPerson = (imageUrl: any, personName: string) => {
-      if (!imageUrl) return false;
-      const filename = String(imageUrl).toLowerCase();
-      const nameParts = personName.toLowerCase().split(/\s+/).filter(p => p.length > 2);
-      if (nameParts.length === 0) return false;
-      // Score: return true if at least one strong part is present
-      return nameParts.some(part => filename.includes(part));
-    };
-
-    // Collect candidate image URLs (thumburl preferred)
-    const candidates: string[] = [];
-    for (const page of pages) {
-      const info = page?.imageinfo?.[0];
-      const imageUrl = info?.thumburl || info?.url;
-      if (imageUrl && isValidImageUrl(imageUrl)) {
-        candidates.push(imageUrl);
+    try {
+      const headers: Record<string, string> = {
+        "Accept": "application/json"
+      };
+      // Add User-Agent and Authorization from env if present
+      if (WIKIMEDIA_APP_NAME) {
+        headers["User-Agent"] = WIKIMEDIA_APP_NAME;
       }
-    }
+      if (WIKIMEDIA_ACCESS_TOKEN) {
+        headers["Authorization"] = `Bearer ${WIKIMEDIA_ACCESS_TOKEN}`;
+      }
+      if (WIKIMEDIA_REFERER) {
+        headers["Referer"] = WIKIMEDIA_REFERER;
+      }
 
-    if (candidates.length === 0) {
-      console.warn(`No valid candidate image URLs for ${personName}`);
-      return FALLBACK_IMAGE();
-    }
+      const response = await fetch(url, {
+        method: "GET",
+        headers,
+        signal: controller.signal
+      });
+      clearTimeout(timeout);
 
-    // Prefer a candidate whose filename matches person name
-    const matched = candidates.find(c => filenameMatchesPerson(c, personName));
-    if (matched) {
-      // console.log(`Selected matched image for ${personName}: ${matched}`);
-      return matched;
-    }
+      if (!response.ok) {
+        lastErr = new Error(`Wikimedia API returned ${response.status} ${response.statusText}`);
+        console.warn(`Wikimedia API non-OK ${response.status} for "${personName}"`);
 
-    // If no filename match, try up to 3 random candidates, otherwise pick first
-    const maxAttempts = Math.min(3, candidates.length);
-    const tried = new Set<number>();
-    for (let i = 0; i < maxAttempts; i++) {
-      let idx: number;
-      do {
-        idx = Math.floor(Math.random() * candidates.length);
-      } while (tried.has(idx) && tried.size < candidates.length);
-      tried.add(idx);
-      const candidate = candidates[idx];
-      // accept candidate (we already filtered by isValidImageUrl)
-      // console.log(`Selected random image for ${personName}: ${candidate}`);
-      return candidate;
-    }
+        if (response.status === 403 || response.status === 429) {
+          const bodyText = await response.text().catch(() => "");
+          console.warn(`Wikimedia response body (truncated): ${bodyText.slice(0, 500)}`);
+          const extra = response.status === 403 ? 5000 : 0;
+          const waitMs = randomJitter(WM_BASE_RETRY_MS * Math.pow(2, attempt - 1) + extra);
+          await sleep(waitMs);
+          continue;
+        }
 
-    // fallback to first candidate (shouldn't usually reach here)
-    // console.log(`Using first candidate image for ${personName}: ${candidates[0]}`);
-    return candidates[0];
-  } catch (error) {
-    console.error(`Error fetching image for ${personName}:`, error);
-    return FALLBACK_IMAGE();
+        if (response.status >= 500 && response.status < 600) {
+          const waitMs = randomJitter(WM_BASE_RETRY_MS * Math.pow(2, attempt - 1));
+          await sleep(waitMs);
+          continue;
+        }
+
+        return FALLBACK_IMAGE();
+      }
+
+      const data = await response.json().catch(() => null);
+      if (!data || !data.query || !data.query.pages) {
+        console.warn(`Wikimedia API returned no pages for ${personName}`);
+        return FALLBACK_IMAGE();
+      }
+
+      const pages = Object.values<any>(data.query.pages);
+      if (pages.length === 0) {
+        console.warn(`Wikimedia returned empty pages array for ${personName}`);
+        return FALLBACK_IMAGE();
+      }
+
+      const isValidImageUrl = (imageUrl: any) => {
+        if (!imageUrl) return false;
+        const urlLower = String(imageUrl).toLowerCase();
+        if (urlLower.includes('.pdf')) return false;
+        if (urlLower.match(/\.(doc|docx|txt|odt|rtf)/)) return false;
+        if (urlLower.match(/\.(jpg|jpeg|png|gif|webp|svg)(\?|$)/)) return true;
+        if (urlLower.includes('/thumb/')) return true;
+        return false;
+      };
+
+      const filenameMatchesPerson = (imageUrl: any, personName: string) => {
+        if (!imageUrl) return false;
+        const filename = String(imageUrl).toLowerCase();
+        const nameParts = personName.toLowerCase().split(/\s+/).filter(p => p.length > 2);
+        if (nameParts.length === 0) return false;
+        return nameParts.some(part => filename.includes(part));
+      };
+
+      const candidates: string[] = [];
+      for (const page of pages) {
+        const info = page?.imageinfo?.[0];
+        const imageUrl = info?.thumburl || info?.url;
+        if (imageUrl && isValidImageUrl(imageUrl)) {
+          candidates.push(imageUrl);
+        }
+      }
+
+      if (candidates.length === 0) {
+        console.warn(`No valid candidate image URLs for ${personName}`);
+        return FALLBACK_IMAGE();
+      }
+
+      const matched = candidates.find(c => filenameMatchesPerson(c, personName));
+      if (matched) {
+        return matched;
+      }
+
+      return candidates[0];
+    } catch (err) {
+      clearTimeout(timeout);
+      lastErr = err;
+      console.warn(`Error fetching Wikimedia for "${personName}" attempt ${attempt}:`, err);
+      const waitMs = randomJitter(WM_BASE_RETRY_MS * Math.pow(2, attempt - 1));
+      await sleep(waitMs);
+      continue;
+    }
   }
 
-  // fallback helper
+  console.error(`Failed to fetch Wikimedia image for "${personName}" after ${WM_MAX_RETRIES} attempts:`, lastErr);
+  return FALLBACK_IMAGE();
+
   function FALLBACK_IMAGE() {
     return 'https://images.pexels.com/photos/1065084/pexels-photo-1065084.jpeg?auto=compress&cs=tinysrgb&w=800';
   }
@@ -298,11 +425,13 @@ Deno.serve(async (req) => {
       throw new Error("Supabase credentials not configured");
     }
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
     const results = await Promise.allSettled([
       updateNewsForCategory(supabase, "bollywood"),
       updateNewsForCategory(supabase, "tv"),
       updateNewsForCategory(supabase, "hollywood")
     ]);
+
     const summary = results.map((result, index) => {
       const category = [
         "bollywood",
