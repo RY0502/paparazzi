@@ -70,7 +70,7 @@ async function fetchGeminiKeyFromUrl(envUrlVar: string) {
           await sleep(wait);
           continue;
         } else {
-          throw lastErr;
+          throw lastErr; 
         }
       }
 
@@ -229,11 +229,11 @@ async function fetchFromGemini(category: string) {
 }
 
 async function fetchPersonImage(personName: string) {
-  // Read Wikimedia env variables
-  const WIKIMEDIA_ACCESS_TOKEN = Deno.env.get("WIKIMEDIA_ACCESS_TOKEN") || "";
+  // Read Wikimedia env variables (no Authorization will be used)
   const WIKIMEDIA_APP_NAME = Deno.env.get("WIKIMEDIA_APP_NAME") || "";
   const WIKIMEDIA_REFERER = Deno.env.get("WIKIMEDIA_REFERER") || "";
 
+  // Build query params, then sanitize the final query string to remove trailing dots
   const params = new URLSearchParams({
     action: 'query',
     generator: 'search',
@@ -243,9 +243,16 @@ async function fetchPersonImage(personName: string) {
     prop: 'imageinfo',
     iiprop: 'url',
     iiurlwidth: '800',
-    format: 'json'
+    format: 'json',
+    origin: '*'
   });
-  const url = `https://commons.wikimedia.org/w/api.php?${params.toString()}`;
+
+  let url = `https://commons.wikimedia.org/w/api.php?${params.toString()}`;
+  if (url.endsWith('.')) {
+    url = url.slice(0, -1);
+  }
+
+  // console.info(`Wikimedia request URL for "${personName}": ${url}`);
 
   // Fetch configuration
   const WM_FETCH_TIMEOUT_MS = 10000;
@@ -268,12 +275,8 @@ async function fetchPersonImage(personName: string) {
       const headers: Record<string, string> = {
         "Accept": "application/json"
       };
-      // Add User-Agent and Authorization from env if present
       if (WIKIMEDIA_APP_NAME) {
         headers["User-Agent"] = WIKIMEDIA_APP_NAME;
-      }
-      if (WIKIMEDIA_ACCESS_TOKEN) {
-        headers["Authorization"] = `Bearer ${WIKIMEDIA_ACCESS_TOKEN}`;
       }
       if (WIKIMEDIA_REFERER) {
         headers["Referer"] = WIKIMEDIA_REFERER;
@@ -286,13 +289,18 @@ async function fetchPersonImage(personName: string) {
       });
       clearTimeout(timeout);
 
+      // Log status and content-type for debugging
+      const contentType = response.headers.get("content-type") || "<none>";
+     // console.info(`Wikimedia response status=${response.status} content-type=${contentType} for "${personName}"`);
+
       if (!response.ok) {
         lastErr = new Error(`Wikimedia API returned ${response.status} ${response.statusText}`);
         console.warn(`Wikimedia API non-OK ${response.status} for "${personName}"`);
 
+        const bodyText = await response.text().catch(() => "");
+        console.warn(`Wikimedia response body (truncated): ${bodyText.slice(0, 500)}`);
+
         if (response.status === 403 || response.status === 429) {
-          const bodyText = await response.text().catch(() => "");
-          console.warn(`Wikimedia response body (truncated): ${bodyText.slice(0, 500)}`);
           const extra = response.status === 403 ? 5000 : 0;
           const waitMs = randomJitter(WM_BASE_RETRY_MS * Math.pow(2, attempt - 1) + extra);
           await sleep(waitMs);
@@ -308,15 +316,52 @@ async function fetchPersonImage(personName: string) {
         return FALLBACK_IMAGE();
       }
 
-      const data = await response.json().catch(() => null);
+      // Safer parsing: read text first, then JSON.parse with try/catch so we can log parse issues
+      let rawText: string | null = null;
+      try {
+        rawText = await response.text();
+      } catch (tErr) {
+        console.warn(`Failed to read Wikimedia response text for ${personName}:`, String(tErr).slice(0, 200));
+        // treat as transient and retry
+        lastErr = tErr;
+        const waitMs = randomJitter(WM_BASE_RETRY_MS * Math.pow(2, attempt - 1));
+        await sleep(waitMs);
+        continue;
+      }
+
+      if (!rawText || rawText.trim().length === 0) {
+        console.warn(`Wikimedia returned empty body for ${personName}. Request URL: ${url}`);
+        // treat as transient and retry
+        lastErr = new Error("Empty body");
+        const waitMs = randomJitter(WM_BASE_RETRY_MS * Math.pow(2, attempt - 1));
+        await sleep(waitMs);
+        continue;
+      }
+
+      let data: any = null;
+      // keep a reasonably-sized snapshot for logs
+      const snapshot = rawText.slice(0, 64 * 1024); // 64 KB
+      try {
+        data = JSON.parse(rawText);
+      } catch (parseErr) {
+        console.warn(`Wikimedia JSON parse error for ${personName}:`, String(parseErr).slice(0, 200));
+        console.warn(`Wikimedia raw response (truncated 8KB): ${snapshot.slice(0, 8192)}`);
+        // Consider this transient and retry up to attempts
+        lastErr = parseErr;
+        const waitMs = randomJitter(WM_BASE_RETRY_MS * Math.pow(2, attempt - 1));
+        await sleep(waitMs);
+        continue;
+      }
+
       if (!data || !data.query || !data.query.pages) {
-        console.warn(`Wikimedia API returned no pages for ${personName}`);
+        console.warn(`Wikimedia response missing query.pages for ${personName}. Parsed keys: ${data ? Object.keys(data) : 'null'}`);
+        console.warn(`Truncated parsed body: ${snapshot.slice(0, 4096)}`);
         return FALLBACK_IMAGE();
       }
 
       const pages = Object.values<any>(data.query.pages);
       if (pages.length === 0) {
-        console.warn(`Wikimedia returned empty pages array for ${personName}`);
+        console.warn(`Wikimedia returned empty pages array for ${personName}. Request URL: ${url}`);
         return FALLBACK_IMAGE();
       }
 
@@ -348,7 +393,7 @@ async function fetchPersonImage(personName: string) {
       }
 
       if (candidates.length === 0) {
-        console.warn(`No valid candidate image URLs for ${personName}`);
+        console.warn(`No valid candidate image URLs for ${personName}. Request URL: ${url}`);
         return FALLBACK_IMAGE();
       }
 
