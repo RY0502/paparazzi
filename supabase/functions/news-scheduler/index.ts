@@ -243,8 +243,7 @@ async function fetchPersonImage(personName: string) {
     prop: 'imageinfo',
     iiprop: 'url',
     iiurlwidth: '800',
-    format: 'json',
-    origin: '*'
+    format: 'json'
   });
   const url = `https://commons.wikimedia.org/w/api.php?${params.toString()}`;
 
