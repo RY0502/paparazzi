@@ -4,14 +4,107 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey"
 };
-async function streamNewsContent(category, personName, newsTitle, controller) {
-  try {
-    const geminiApiKey = Deno.env.get("GEMINI_API_KEY");
-    if (!geminiApiKey) {
-      throw new Error("GEMINI_API_KEY not configured");
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function randomJitter(baseMs: number) {
+  const jitter = baseMs * 0.3;
+  return Math.max(0, baseMs + (Math.random() * jitter * 2 - jitter));
+}
+
+// Fetch the Gemini API key from the URL stored in NEWS_URL_KEY env var.
+// Expects JSON with keys[0].vault_keys.decrypted_value.
+// Retries up to 3 attempts (initial + 2 retries) with exponential backoff + jitter.
+async function fetchGeminiKeyFromNewsUrl() {
+  const url = Deno.env.get("NEWS_URL_KEY");
+  if (!url) {
+    throw new Error("NEWS_URL_KEY not configured");
+  }
+
+  const MAX_ATTEMPTS = 3;
+  const BASE_DELAY_MS = 500;
+  let lastErr: any = null;
+
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      const controller = new AbortController();
+      const timeoutMs = 5000;
+      const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+      const res = await fetch(url, { method: "GET", signal: controller.signal });
+      clearTimeout(timeout);
+
+      if (!res.ok) {
+        const txt = await res.text().catch(() => "");
+        lastErr = new Error(`Key fetch returned ${res.status} ${res.statusText} ${txt ? `- ${txt.slice(0,200)}` : ""}`);
+        if (attempt < MAX_ATTEMPTS) {
+          const wait = randomJitter(BASE_DELAY_MS * Math.pow(2, attempt - 1));
+          await sleep(wait);
+          continue;
+        } else {
+          throw lastErr;
+        }
+      }
+
+      const data = await res.json().catch(() => null);
+      if (!data || !Array.isArray(data.keys) || data.keys.length === 0) {
+        lastErr = new Error("Key response missing keys array or empty");
+        if (attempt < MAX_ATTEMPTS) {
+          const wait = randomJitter(BASE_DELAY_MS * Math.pow(2, attempt - 1));
+          await sleep(wait);
+          continue;
+        } else {
+          throw lastErr;
+        }
+      }
+
+      const vault = data.keys[0]?.vault_keys;
+      const decrypted = vault?.decrypted_value;
+      if (!decrypted) {
+        lastErr = new Error("Missing keys[0].vault_keys.decrypted_value in key response");
+        if (attempt < MAX_ATTEMPTS) {
+          const wait = randomJitter(BASE_DELAY_MS * Math.pow(2, attempt - 1));
+          await sleep(wait);
+          continue;
+        } else {
+          throw lastErr;
+        }
+      }
+
+      return String(decrypted);
+    } catch (err) {
+      lastErr = err;
+      if (attempt < MAX_ATTEMPTS) {
+        const wait = randomJitter(BASE_DELAY_MS * Math.pow(2, attempt - 1));
+        await sleep(wait);
+        continue;
+      } else {
+        throw lastErr;
+      }
     }
+  }
+
+  throw lastErr || new Error("Failed to fetch Gemini key");
+}
+
+async function streamNewsContent(category: string, personName: string, newsTitle: string, controller: ReadableStreamDefaultController) {
+  try {
+    // fetch per-request gemini key
+    const geminiApiKey = await fetchGeminiKeyFromNewsUrl();
+    if (!geminiApiKey) {
+      throw new Error("Gemini API key not available");
+    }
+
     const prompt = `Generate a short text summary of the given news regarding the provided celebrity. Provide the latest available contents through search quickly. ${category} ${personName} - ${newsTitle}`;
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?key=${geminiApiKey}&alt=sse`, {
+
+    // Add a small timeout guard for obtaining the response stream
+    const controllerTimeout = new AbortController();
+    const overallTimeoutMs = 20000; // 20s to establish stream
+    const timer = setTimeout(() => controllerTimeout.abort(), overallTimeoutMs);
+
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?key=${encodeURIComponent(geminiApiKey)}&alt=sse`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -36,10 +129,13 @@ async function streamNewsContent(category, personName, newsTitle, controller) {
             thinkingBudget: 0
           }
         }
-      })
+      }),
+      signal: controllerTimeout.signal
     });
+    clearTimeout(timer);
+
     if (!response.ok) {
-      throw new Error(`Gemini API error: ${response.statusText}`);
+      throw new Error(`Gemini API error: ${response.status} ${response.statusText}`);
     }
     const reader = response.body?.getReader();
     if (!reader) {
@@ -47,54 +143,57 @@ async function streamNewsContent(category, personName, newsTitle, controller) {
     }
     const decoder = new TextDecoder();
     let buffer = "";
-    while(true){
+
+    // Read SSE-like stream chunks and forward text payloads as SSE 'data: ...' events
+    while (true) {
       const { done, value } = await reader.read();
       if (done) break;
-      buffer += decoder.decode(value, {
-        stream: true
-      });
+      buffer += decoder.decode(value, { stream: true });
       const lines = buffer.split("\n");
-      for(let i = 0; i < lines.length - 1; i++){
-        const line = lines[i];
+      // process all complete lines, leave last partial line in buffer
+      for (let i = 0; i < lines.length - 1; i++) {
+        const line = lines[i].trimRight();
         if (line.startsWith("data: ")) {
+          const jsonStr = line.slice(6);
           try {
-            const jsonStr = line.slice(6);
             const data = JSON.parse(jsonStr);
-            if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
-              const text = data.candidates[0].content.parts[0].text;
-              controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({
-                text
-              })}\n\n`));
+            const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (typeof text === "string" && text.length > 0) {
+              const payload = JSON.stringify({ text });
+              controller.enqueue(new TextEncoder().encode(`data: ${payload}\n\n`));
             }
-          } catch  {}
+          } catch (e) {
+            // ignore JSON parse errors for partial or non-JSON lines
+          }
         }
       }
       buffer = lines[lines.length - 1];
     }
-    if (buffer.startsWith("data: ")) {
+
+    // process remaining buffer if any
+    if (buffer.trim().startsWith("data: ")) {
+      const jsonStr = buffer.trim().slice(6);
       try {
-        const jsonStr = buffer.slice(6);
         const data = JSON.parse(jsonStr);
-        if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
-          const text = data.candidates[0].content.parts[0].text;
-          controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({
-            text
-          })}\n\n`));
+        const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (typeof text === "string" && text.length > 0) {
+          const payload = JSON.stringify({ text });
+          controller.enqueue(new TextEncoder().encode(`data: ${payload}\n\n`));
         }
-      } catch  {}
+      } catch (e) {
+        // ignore
+      }
     }
-    controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({
-      done: true
-    })}\n\n`));
+
+    controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({ done: true })}\n\n`));
     controller.close();
   } catch (error) {
-    controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({
-      error: error instanceof Error ? error.message : "Unknown error"
-    })}\n\n`));
+    controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" })}\n\n`));
     controller.close();
   }
 }
-Deno.serve(async (req)=>{
+
+Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, {
       status: 200,
@@ -117,23 +216,22 @@ Deno.serve(async (req)=>{
         }
       });
     }
-    // inside Deno.serve handler replace stream creation with:
+
     const stream = new ReadableStream({
-      async start (controller) {
+      async start(controller) {
         try {
           await streamNewsContent(category, personName, newsTitle, controller);
         } catch (err) {
           console.error("streamNewsContent error:", err);
-          controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({
-            error: err?.message ?? String(err)
-          })}\n\n`));
+          controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({ error: err?.message ?? String(err) })}\n\n`));
           controller.close();
         }
       },
-      cancel (reason) {
+      cancel(reason) {
         console.info("stream cancelled:", reason);
       }
     });
+
     return new Response(stream, {
       status: 200,
       headers: {
