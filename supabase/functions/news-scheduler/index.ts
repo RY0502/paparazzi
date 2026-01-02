@@ -246,9 +246,16 @@ async function fetchPersonImage(personName: string) {
   const WIKIMEDIA_REFERER = Deno.env.get("WIKIMEDIA_REFERER") || "";
 
   let normalizedPersonName = personName;
-  const marker = ' and ';
-  const lower = personName.toLowerCase();
-  const idx = lower.indexOf(marker);
+  const lower = normalizedPersonName.toLowerCase();
+  
+  let marker = ' and ';
+  let idx = lower.indexOf(marker);
+  if (idx !== -1) {
+    normalizedPersonName.slice(0, idx).trim();
+  }
+
+  marker = ' & ';
+  idx = lower.indexOf(marker);
   if (idx !== -1) {
     normalizedPersonName.slice(0, idx).trim();
   }
@@ -256,7 +263,7 @@ async function fetchPersonImage(personName: string) {
   const params = new URLSearchParams({
     action: 'query',
     generator: 'search',
-    gsrsearch: personName,
+    gsrsearch: normalizedPersonName,
     gsrnamespace: '6',
     gsrlimit: '15',
     prop: 'imageinfo',
