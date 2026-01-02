@@ -93,8 +93,9 @@ async function streamNewsContent(category: string, personName: string, newsTitle
   try {
     // fetch per-request gemini key
     let geminiApiKey =  Deno.env.get('NEWS_GEMINI_KEY') &&  Deno.env.get('NEWS_GEMINI_KEY').trim();
-if (!geminiApiKey) {
-  geminiApiKey = await fetchGeminiKeyFromNewsUrl();
+
+ if (!geminiApiKey) {
+   geminiApiKey = await fetchGeminiKeyFromNewsUrl();
 }
 if (!geminiApiKey) {
   throw new Error("Gemini API key not available");
