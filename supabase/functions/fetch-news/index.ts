@@ -245,6 +245,14 @@ async function fetchPersonImage(personName: string) {
   const WIKIMEDIA_APP_NAME = Deno.env.get("WIKIMEDIA_APP_NAME") || "";
   const WIKIMEDIA_REFERER = Deno.env.get("WIKIMEDIA_REFERER") || "";
 
+  let normalizedPersonName = personName;
+  const marker = ' and ';
+  const lower = personName.toLowerCase();
+  const idx = lower.indexOf(marker);
+  if (idx !== -1) {
+    normalizedPersonName.slice(0, idx).trim();
+  }
+
   const params = new URLSearchParams({
     action: 'query',
     generator: 'search',
@@ -368,12 +376,13 @@ async function fetchPersonImage(personName: string) {
         return FALLBACK_IMAGE();
       }
 
-      const matched = candidates.find(c => filenameMatchesPerson(c, personName));
-      if (matched) {
-        return matched;
-      }
-
-      return candidates[0];
+      const matches = candidates.filter(c => filenameMatchesPerson(c, personName));
+if (matches.length === 0) {
+  return candidates[0];// or simply `return;`
+}
+const randomIndex = Math.floor(Math.random() * matches.length);
+return matches[randomIndex];
+     
     } catch (err) {
       clearTimeout(timeout);
       lastErr = err;
@@ -388,7 +397,7 @@ async function fetchPersonImage(personName: string) {
   return FALLBACK_IMAGE();
 
   function FALLBACK_IMAGE() {
-    return 'https://images.pexels.com/photos/1065084/pexels-photo-1065084.jpeg?auto=compress&cs=tinysrgb&w=800';
+    return 'https://fr0jflsfvamy.objectstorage.eu-frankfurt-1.oci.customer-oci.com/n/fr0jflsfvamy/b/paparazzi/o/default.png';
   }
 }
 
