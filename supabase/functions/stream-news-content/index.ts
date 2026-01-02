@@ -1,540 +1,259 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { createClient } from "npm:@supabase/supabase-js@2.57.4";
-
 const corsHeaders = {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey"
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey"
 };
 
-// Delay to respect Wikimedia rate limits - wait between each request
-const WIKIMEDIA_REQUEST_DELAY_MS = 400; // 400ms between requests to be safe
-
 function sleep(ms: number) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-}
+  return new Promise((resolve) => setTimeout(resolve, ms));
+} 
 
 function randomJitter(baseMs: number) {
-    const jitter = baseMs * 0.3;
-    return Math.max(0, baseMs + (Math.random() * jitter * 2 - jitter));
+  const jitter = baseMs * 0.3;
+  return Math.max(0, baseMs + (Math.random() * jitter * 2 - jitter));
 }
 
-async function fetchGeminiKeyFromUrl(envUrlVar: string) {
-    const url = Deno.env.get(envUrlVar);
-    if (!url) {
-        throw new Error(`${envUrlVar} not configured`);
-    }
+// Fetch the Gemini API key from the URL stored in NEWS_URL_KEY env var.
+// Expects JSON with keys[0].vault_keys.decrypted_value.
+// Retries up to 3 attempts (initial + 2 retries) with exponential backoff + jitter.
+async function fetchGeminiKeyFromNewsUrl() {
+  const url = Deno.env.get("NEWS_URL_KEY");
+  if (!url) {
+    throw new Error("NEWS_URL_KEY not configured");
+  }
 
-    const MAX_ATTEMPTS = 3;
-    const BASE_DELAY_MS = 500; // base backoff
-    let lastErr: any = null;
+  const MAX_ATTEMPTS = 3;
+  const BASE_DELAY_MS = 500;
+  let lastErr: any = null;
 
-    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-        try {
-            const controller = new AbortController();
-            const timeoutMs = 5000;
-            const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      const controller = new AbortController();
+      const timeoutMs = 5000;
+      const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
-            const res = await fetch(url, { method: "GET", signal: controller.signal });
-            clearTimeout(timeout);
+      const res = await fetch(url, { method: "GET", signal: controller.signal });
+      clearTimeout(timeout);
 
-            if (!res.ok) {
-                const txt = await res.text().catch(() => "");
-                lastErr = new Error(`Key fetch returned ${res.status} ${res.statusText} ${txt ? `- ${txt.slice(0, 200)}` : ""}`);
-                if (attempt < MAX_ATTEMPTS) {
-                    const wait = randomJitter(BASE_DELAY_MS * Math.pow(2, attempt - 1));
-                    await sleep(wait);
-                    continue;
-                } else {
-                    throw lastErr;
-                }
-            }
-
-            const data = await res.json().catch(() => null);
-            if (!data || !Array.isArray(data.keys) || data.keys.length === 0) {
-                lastErr = new Error("Key response missing keys array or empty");
-                if (attempt < MAX_ATTEMPTS) {
-                    const wait = randomJitter(BASE_DELAY_MS * Math.pow(2, attempt - 1));
-                    await sleep(wait);
-                    continue;
-                } else {
-                    throw lastErr;
-                }
-            }
-
-            const vault = data.keys[0]?.vault_keys;
-            const decrypted = vault?.decrypted_value;
-            if (!decrypted) {
-                lastErr = new Error("Missing keys[0].vault_keys.decrypted_value in key response");
-                if (attempt < MAX_ATTEMPTS) {
-                    const wait = randomJitter(BASE_DELAY_MS * Math.pow(2, attempt - 1));
-                    await sleep(wait);
-                    continue;
-                } else {
-                    throw lastErr;
-                }
-            }
-
-            return String(decrypted);
-        } catch (err) {
-            lastErr = err;
-            if (attempt < MAX_ATTEMPTS) {
-                const wait = randomJitter(BASE_DELAY_MS * Math.pow(2, attempt - 1));
-                await sleep(wait);
-                continue;
-            } else {
-                throw lastErr;
-            }
+      if (!res.ok) {
+        const txt = await res.text().catch(() => "");
+        lastErr = new Error(`Key fetch returned ${res.status} ${res.statusText} ${txt ? `- ${txt.slice(0,200)}` : ""}`);
+        if (attempt < MAX_ATTEMPTS) {
+          const wait = randomJitter(BASE_DELAY_MS * Math.pow(2, attempt - 1));
+          await sleep(wait);
+          continue;
+        } else {
+          throw lastErr;
         }
-    }
+      }
 
-    throw lastErr || new Error("Failed to fetch Gemini key");
+      const data = await res.json().catch(() => null);
+      if (!data || !Array.isArray(data.keys) || data.keys.length === 0) {
+        lastErr = new Error("Key response missing keys array or empty");
+        if (attempt < MAX_ATTEMPTS) {
+          const wait = randomJitter(BASE_DELAY_MS * Math.pow(2, attempt - 1));
+          await sleep(wait);
+          continue;
+        } else {
+          throw lastErr;
+        }
+      }
+
+      const vault = data.keys[0]?.vault_keys;
+      const decrypted = vault?.decrypted_value;
+      if (!decrypted) {
+        lastErr = new Error("Missing keys[0].vault_keys.decrypted_value in key response");
+        if (attempt < MAX_ATTEMPTS) {
+          const wait = randomJitter(BASE_DELAY_MS * Math.pow(2, attempt - 1));
+          await sleep(wait);
+          continue;
+        } else {
+          throw lastErr;
+        }
+      }
+
+      return String(decrypted);
+    } catch (err) {
+      lastErr = err;
+      if (attempt < MAX_ATTEMPTS) {
+        const wait = randomJitter(BASE_DELAY_MS * Math.pow(2, attempt - 1));
+        await sleep(wait);
+        continue;
+      } else {
+        throw lastErr;
+      }
+    }
+  }
+
+  throw lastErr || new Error("Failed to fetch Gemini key");
 }
 
-async function fetchFromGeminiWithKey(category: string, geminiApiKey: string) {
-    const prompts: Record<string, string> = {
-        bollywood: `Using ONLY real-time web results get exactly 15 latest entertainment news items about Indian Bollywood actors and singers trending from the past 24 hours. Each news item must be on a separate line in this exact format:
-[Person Name] - [Single line news description]
+async function streamNewsContent(category: string, personName: string, newsTitle: string, controller: ReadableStreamDefaultController) {
+  try {
+    // fetch per-request gemini key
+    let geminiApiKey =  Deno.env.get('NEWS_GEMINI_KEY') &&  Deno.env.get('NEWS_GEMINI_KEY').trim();
+if (!geminiApiKey) {
+  geminiApiKey = await fetchGeminiKeyFromNewsUrl();
+}
+if (!geminiApiKey) {
+  throw new Error("Gemini API key not available");
+}
 
-Example:
-Shah Rukh Khan - Announces new collaboration with international director
-Deepika Padukone - Wins Best Actress award at film festival
+    const prompt = `Generate a short text summary of the given news regarding the provided celebrity. Provide the latest available contents through search quickly. ${category} ${personName} - ${newsTitle}`;
 
-Requirements:
-- Use real, well-known Bollywood celebrities
-- Keep each news item to one line
-- Make news current and tabloid worthy
-- Return exactly 15 items`,
-        tv: `Using ONLY real-time web results get exactly 15 latest entertainment news items about Indian daily soap and TV industry actors trending from the past 24 hours. Each news item must be on a separate line in this exact format:
-[Person Name] - [Single line news description]
+    // Add a small timeout guard for obtaining the response stream
+    const controllerTimeout = new AbortController();
+    const overallTimeoutMs = 20000; // 20s to establish stream
+    const timer = setTimeout(() => controllerTimeout.abort(), overallTimeoutMs);
 
-Example:
-Hina Khan - Returns to popular TV show after break
-Rupali Ganguly - Show reaches 1000 episode milestone
-
-Requirements:
-- Use real, well-known Indian TV actors
-- Keep each news item to one line
-- Make news current and  tabloid worthy
-- Return exactly 15 items`,
-        hollywood: `Using ONLY real-time web results get exactly 15 latest entertainment news items about American Hollywood actors and singers trending from the past 24 hours. Each news item must be on a separate line in this exact format:
-[Person Name] - [Single line news description]
-
-Example:
-Leonardo DiCaprio - Signs for climate change documentary
-Taylor Swift - Announces surprise album release
-
-Requirements:
-- Use real, well-known Hollywood celebrities
-- Keep each news item to one line
-- Make news current and tabloid worthy
-- Return exactly 15 items`
-    };
-
-    const prompt = prompts[category];
-    if (!prompt) {
-        throw new Error(`Invalid category: ${category}`);
-    }
-
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(geminiApiKey)}`;
-    const bodyPayload = {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?key=${encodeURIComponent(geminiApiKey)}&alt=sse`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
         contents: [
-            {
-                parts: [
-                    {
-                        text: prompt
-                    }
-                ]
-            }
+          {
+            parts: [
+              {
+                text: prompt
+              }
+            ]
+          }
         ],
         tools: [
-            {
-                google_search: {}
-            }
+          {
+            google_search: {}
+          }
         ],
         generationConfig: {
-            temperature: 0.9,
-            maxOutputTokens: 2048
+          thinkingConfig: {
+            thinkingBudget: 0
+          }
         }
-    };
-
-    const maxAttempts = 3;
-    const retryDelayMs = 5000;
-    let lastError: any = null;
-    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-        try {
-            const response = await fetch(url, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify(bodyPayload)
-            });
-
-            if (!response.ok) {
-                const text = await response.text().catch(() => null);
-                lastError = new Error(`Gemini API error: ${response.status} ${response.statusText} ${text ? `- ${text}` : ""}`);
-                if (attempt < maxAttempts) {
-                    console.warn(`Gemini request failed (attempt ${attempt}/${maxAttempts}). Retrying in ${retryDelayMs}ms...`, lastError);
-                    await sleep(retryDelayMs);
-                    continue;
-                } else {
-                    throw lastError;
-                }
-            }
-
-            const data = await response.json();
-            const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-            const lines = text.split("\n").filter((line: string) => line.trim().length > 0);
-            const newsItems: { news_text: string; person_name: string; search_query: string }[] = [];
-            for (const line of lines) {
-                const match = line.match(/^(?:\d+\.\s*)?(.+?)\s*[-–]\s*(.+)$/);
-                if (match && newsItems.length < 15) {
-                    const [, personName, newsText] = match;
-                    newsItems.push({
-                        news_text: newsText.trim(),
-                        person_name: personName.trim(),
-                        search_query: `${personName.trim()} ${newsText.trim()}`
-                    });
-                }
-            }
-            return newsItems.slice(0, 15);
-        } catch (err) {
-            lastError = err;
-            if (attempt < maxAttempts) {
-                console.warn(`Gemini request error (attempt ${attempt}/${maxAttempts}):`, err, `Retrying in ${retryDelayMs}ms...`);
-                await sleep(retryDelayMs);
-                continue;
-            } else {
-                console.error(`Gemini request failed after ${maxAttempts} attempts:`, err);
-                throw err;
-            }
-        }
-    }
-    throw lastError || new Error("Unknown error calling Gemini API");
-}
-
-async function fetchFromGemini(category: string) {
-    const map: Record<string, string> = {
-        bollywood: "BOLLYWOOD_URL_KEY",
-        tv: "TV_URL_KEY",
-        hollywood: "HOLLYWOOD_URL_KEY"
-    };
-    const envVar = map[category];
-    if (!envVar) throw new Error(`No key URL mapping for category ${category}`);
-
-    const geminiKey = await fetchGeminiKeyFromUrl(envVar);
-    return fetchFromGeminiWithKey(category, geminiKey);
-}
-
-async function fetchPersonImage(personName: string) {
-    const WIKIMEDIA_APP_NAME = Deno.env.get("WIKIMEDIA_APP_NAME") || "";
-    const WIKIMEDIA_REFERER = Deno.env.get("WIKIMEDIA_REFERER") || "";
-
-    const params = new URLSearchParams({
-        action: 'query',
-        generator: 'search',
-        gsrsearch: personName,
-        gsrnamespace: '6',
-        gsrlimit: '15',
-        prop: 'imageinfo',
-        iiprop: 'url',
-        iiurlwidth: '800',
-        format: 'json',
-        origin: '*'
+      }),
+      signal: controllerTimeout.signal
     });
+    clearTimeout(timer);
 
-    let url = `https://commons.wikimedia.org/w/api.php?${params.toString()}`;
-    if (url.endsWith('.')) {
-        url = url.slice(0, -1);
+    if (!response.ok) {
+      throw new Error(`Gemini API error: ${response.status} ${response.statusText}`);
+    }
+    const reader = response.body?.getReader();
+    if (!reader) {
+      throw new Error("No response body");
+    }
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    // Read SSE-like stream chunks and forward text payloads as SSE 'data: ...' events
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      // process all complete lines, leave last partial line in buffer
+      for (let i = 0; i < lines.length - 1; i++) {
+        const line = lines[i].trimRight();
+        if (line.startsWith("data: ")) {
+          const jsonStr = line.slice(6);
+          try {
+            const data = JSON.parse(jsonStr);
+            const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (typeof text === "string" && text.length > 0) {
+              const payload = JSON.stringify({ text });
+              controller.enqueue(new TextEncoder().encode(`data: ${payload}\n\n`));
+            }
+          } catch (e) {
+            // ignore JSON parse errors for partial or non-JSON lines
+          }
+        }
+      }
+      buffer = lines[lines.length - 1];
     }
 
-    const WM_FETCH_TIMEOUT_MS = 10000;
-    const WM_MAX_RETRIES = 2; // Reduced from 4 to 2 to avoid excessive retries
-    const WM_BASE_RETRY_MS = 2000; // Increased base retry delay
-
-    let attempt = 0;
-    let lastErr: any = null;
-    while (attempt < WM_MAX_RETRIES) {
-        attempt++;
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), WM_FETCH_TIMEOUT_MS);
-
-        if (attempt > 1) {
-            const backoff = randomJitter(WM_BASE_RETRY_MS * Math.pow(2, attempt - 2));
-            console.log(`Retrying Wikimedia request for "${personName}" (attempt ${attempt}/${WM_MAX_RETRIES}) after ${backoff}ms`);
-            await sleep(backoff);
+    // process remaining buffer if any
+    if (buffer.trim().startsWith("data: ")) {
+      const jsonStr = buffer.trim().slice(6);
+      try {
+        const data = JSON.parse(jsonStr);
+        const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (typeof text === "string" && text.length > 0) {
+          const payload = JSON.stringify({ text });
+          controller.enqueue(new TextEncoder().encode(`data: ${payload}\n\n`));
         }
-
-        try {
-            const headers: Record<string, string> = {
-                "Accept": "application/json"
-            };
-            if (WIKIMEDIA_APP_NAME) {
-                headers["User-Agent"] = WIKIMEDIA_APP_NAME;
-            }
-            if (WIKIMEDIA_REFERER) {
-                headers["Referer"] = WIKIMEDIA_REFERER;
-            }
-
-            const response = await fetch(url, {
-                method: "GET",
-                headers,
-                signal: controller.signal
-            });
-            clearTimeout(timeout);
-
-            if (!response.ok) {
-                lastErr = new Error(`Wikimedia API returned ${response.status} ${response.statusText}`);
-                console.warn(`Wikimedia API non-OK ${response.status} for "${personName}"`);
-
-                const bodyText = await response.text().catch(() => "");
-                if (bodyText.length < 1000) {
-                    console.warn(`Wikimedia response body: ${bodyText}`);
-                }
-
-                // Handle rate limiting errors with longer delays
-                if (response.status === 403 || response.status === 429) {
-                    const extra = 10000; // 10 second extra delay for rate limiting
-                    const waitMs = randomJitter(WM_BASE_RETRY_MS * Math.pow(2, attempt - 1) + extra);
-                    console.warn(`Rate limited! Waiting ${waitMs}ms before retry...`);
-                    await sleep(waitMs);
-                    continue;
-                }
-
-                // Handle server errors
-                if (response.status >= 500 && response.status < 600) {
-                    const waitMs = randomJitter(WM_BASE_RETRY_MS * Math.pow(2, attempt - 1));
-                    await sleep(waitMs);
-                    continue;
-                }
-
-                // For other errors, return fallback immediately
-                return FALLBACK_IMAGE();
-            }
-
-            let rawText: string | null = null;
-            try {
-                rawText = await response.text();
-            } catch (tErr) {
-                console.warn(`Failed to read Wikimedia response text for ${personName}:`, String(tErr).slice(0, 200));
-                lastErr = tErr;
-                const waitMs = randomJitter(WM_BASE_RETRY_MS * Math.pow(2, attempt - 1));
-                await sleep(waitMs);
-                continue;
-            }
-
-            if (!rawText || rawText.trim().length === 0) {
-                console.warn(`Wikimedia returned empty body for ${personName}`);
-                lastErr = new Error("Empty body");
-                const waitMs = randomJitter(WM_BASE_RETRY_MS * Math.pow(2, attempt - 1));
-                await sleep(waitMs);
-                continue;
-            }
-
-            let data: any = null;
-            try {
-                data = JSON.parse(rawText);
-            } catch (parseErr) {
-                console.warn(`Wikimedia JSON parse error for ${personName}:`, String(parseErr).slice(0, 200));
-                lastErr = parseErr;
-                const waitMs = randomJitter(WM_BASE_RETRY_MS * Math.pow(2, attempt - 1));
-                await sleep(waitMs);
-                continue;
-            }
-
-            if (!data || !data.query || !data.query.pages) {
-                console.warn(`Wikimedia response missing query.pages for ${personName}`);
-                return FALLBACK_IMAGE();
-            }
-
-            const pages = Object.values<any>(data.query.pages);
-            if (pages.length === 0) {
-                console.warn(`Wikimedia returned empty pages array for ${personName}`);
-                return FALLBACK_IMAGE();
-            }
-
-            const isValidImageUrl = (imageUrl: any) => {
-                if (!imageUrl) return false;
-                const urlLower = String(imageUrl).toLowerCase();
-                if (urlLower.includes('.pdf')) return false;
-                if (urlLower.match(/\.(doc|docx|txt|odt|rtf)/)) return false;
-                if (urlLower.match(/\.(jpg|jpeg|png|gif|webp|svg)(\?|$)/)) return true;
-                if (urlLower.includes('/thumb/')) return true;
-                return false;
-            };
-
-            const filenameMatchesPerson = (imageUrl: any, personName: string) => {
-                if (!imageUrl) return false;
-                const filename = String(imageUrl).toLowerCase();
-                const nameParts = personName.toLowerCase().split(/\s+/).filter(p => p.length > 2);
-                if (nameParts.length === 0) return false;
-                return nameParts.some(part => filename.includes(part));
-            };
-
-            const candidates: string[] = [];
-            for (const page of pages) {
-                const info = page?.imageinfo?.[0];
-                const imageUrl = info?.thumburl || info?.url;
-                if (imageUrl && isValidImageUrl(imageUrl)) {
-                    candidates.push(imageUrl);
-                }
-            }
-
-            if (candidates.length === 0) {
-                console.warn(`No valid candidate image URLs for ${personName}`);
-                return FALLBACK_IMAGE();
-            }
-
-            const matched = candidates.find(c => filenameMatchesPerson(c, personName));
-            if (matched) {
-                return matched;
-            }
-
-            return candidates[0];
-        } catch (err) {
-            clearTimeout(timeout);
-            lastErr = err;
-            console.warn(`Error fetching Wikimedia for "${personName}" attempt ${attempt}:`, err);
-            const waitMs = randomJitter(WM_BASE_RETRY_MS * Math.pow(2, attempt - 1));
-            await sleep(waitMs);
-            continue;
-        }
+      } catch (e) {
+        // ignore
+      }
     }
 
-    console.error(`Failed to fetch Wikimedia image for "${personName}" after ${WM_MAX_RETRIES} attempts:`, lastErr);
-    return FALLBACK_IMAGE();
-
-    function FALLBACK_IMAGE() {
-        return 'https://images.pexels.com/photos/1065084/pexels-photo-1065084.jpeg?auto=compress&cs=tinysrgb&w=800';
-    }
-}
-
-async function updateNewsForCategory(supabase: any, category: string) {
-    try {
-        console.log(`Fetching news for ${category}...`);
-        const newsItems = await fetchFromGemini(category);
-        console.log(`Fetched ${newsItems.length} news items for ${category}`);
-
-        // Sequential image fetching with delays to respect rate limits
-        const newsWithImages: any[] = [];
-        for (let i = 0; i < newsItems.length; i++) {
-            const item = newsItems[i];
-            try {
-                console.log(`Fetching image ${i + 1}/${newsItems.length} for ${item.person_name}...`);
-                const image_url = await fetchPersonImage(item.person_name);
-                newsWithImages.push({
-                    ...item,
-                    image_url,
-                    created_at: new Date().toISOString()
-                });
-
-                // CRITICAL: Wait between requests to respect Wikimedia rate limits
-                // Only delay if not the last item
-                if (i < newsItems.length - 1) {
-                    await sleep(WIKIMEDIA_REQUEST_DELAY_MS);
-                }
-            } catch (imgErr) {
-                console.warn(`Failed to fetch image for ${item.person_name}, using fallback. Error:`, imgErr);
-                newsWithImages.push({
-                    ...item,
-                    image_url: 'https://images.pexels.com/photos/1065084/pexels-photo-1065084.jpeg?auto=compress&cs=tinysrgb&w=800',
-                    created_at: new Date().toISOString()
-                });
-
-                // Still delay even on error to maintain consistent rate
-                if (i < newsItems.length - 1) {
-                    await sleep(WIKIMEDIA_REQUEST_DELAY_MS);
-                }
-            }
-        }
-
-        const tableName = `${category}_news`;
-        const { data, deleteError } = await supabase.from(tableName).delete().lt('created_at', new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString());
-        if (deleteError) {
-            console.error(`Error clearing old news for ${category}:`, deleteError);
-        }
-        const { error: insertError } = await supabase.from(tableName).insert(newsWithImages);
-        if (insertError) {
-            console.error(`Error inserting news for ${category}:`, insertError);
-            throw insertError;
-        }
-        console.log(`Successfully updated ${category} news`);
-        return {
-            success: true,
-            count: newsWithImages.length
-        };
-    } catch (error) {
-        console.error(`Error updating ${category} news:`, error);
-        return {
-            success: false,
-            error: error instanceof Error ? error.message : "Unknown error"
-        };
-    }
+    controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({ done: true })}\n\n`));
+    controller.close();
+  } catch (error) {
+    controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" })}\n\n`));
+    controller.close();
+  }
 }
 
 Deno.serve(async (req) => {
-    if (req.method === "OPTIONS") {
-        return new Response(null, {
-            status: 200,
-            headers: corsHeaders
-        });
-    }
-    try {
-        const supabaseUrl = Deno.env.get("SUPABASE_URL");
-        const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-        if (!supabaseUrl || !supabaseServiceKey) {
-            throw new Error("Supabase credentials not configured");
+  if (req.method === "OPTIONS") {
+    return new Response(null, {
+      status: 200,
+      headers: corsHeaders
+    });
+  }
+  try {
+    const url = new URL(req.url);
+    const category = url.searchParams.get("category");
+    const personName = url.searchParams.get("personName");
+    const newsTitle = url.searchParams.get("newsTitle");
+    if (!category || !personName || !newsTitle) {
+      return new Response(JSON.stringify({
+        error: "Missing required parameters: category, personName, newsTitle"
+      }), {
+        status: 400,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json"
         }
-        const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-        // Process categories sequentially to spread out Wikimedia requests even more
-        const results = await Promise.allSettled([
-            updateNewsForCategory(supabase, "bollywood"),
-            updateNewsForCategory(supabase, "tv"),
-            updateNewsForCategory(supabase, "hollywood")
-        ]);
-
-        const summary = results.map((result, index) => {
-            const category = [
-                "bollywood",
-                "tv",
-                "hollywood"
-            ][index];
-            if (result.status === "fulfilled") {
-                return {
-                    category,
-                    ...result.value
-                };
-            } else {
-                return {
-                    category,
-                    success: false,
-                    error: result.reason?.message || "Unknown error"
-                };
-            }
-        });
-        return new Response(JSON.stringify({
-            message: "News update completed",
-            results: summary,
-            timestamp: new Date().toISOString()
-        }), {
-            status: 200,
-            headers: {
-                ...corsHeaders,
-                "Content-Type": "application/json"
-            }
-        });
-    } catch (error) {
-        console.error("Error in news-scheduler function:", error);
-        return new Response(JSON.stringify({
-            error: error instanceof Error ? error.message : "Internal server error"
-        }), {
-            status: 500,
-            headers: {
-                ...corsHeaders,
-                "Content-Type": "application/json"
-            }
-        });
+      });
     }
+
+    const stream = new ReadableStream({
+      async start(controller) {
+        try {
+          await streamNewsContent(category, personName, newsTitle, controller);
+        } catch (err) {
+          console.error("streamNewsContent error:", err);
+          controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({ error: err?.message ?? String(err) })}\n\n`));
+          controller.close();
+        }
+      },
+      cancel(reason) {
+        console.info("stream cancelled:", reason);
+      }
+    });
+
+    return new Response(stream, {
+      status: 200,
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive"
+      }
+    });
+  } catch (error) {
+    console.error("Error in stream-news-content function:", error);
+    return new Response(JSON.stringify({
+      error: error instanceof Error ? error.message : "Internal server error"
+    }), {
+      status: 500,
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "application/json"
+      }
+    });
+  }
 });
