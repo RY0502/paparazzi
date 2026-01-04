@@ -103,13 +103,14 @@ Requirements:
 - Use real, well-known Bollywood celebrities
 - Keep each news item to one line
 - Make news current and tabloid worthy
-- Single line news description should be meaningfully complete. E.g. 'Javed Akhtar - threaten' is incomplete and should not be sent
-- Return exactly 15 items and return only 1 when news are similar. E.g.
+- Constraint: Single line news description should be meaningfully complete. E.g. 'Javed Akhtar - threaten' is incomplete and should not be sent
+- Return exactly 15 items
+- Constraint:  Return only 1 when news are similar. E.g.
 Ranveer Singh - Dhurandhar marches towards Rs 750
 and
 Ranveer Singh - his film Dhurandhar marches towards RS 750 crores mark
 should result in single news item and not 2
-- Important: Remove any citation text or cite in the single line news description like [cite: 2, 3`,
+- Constraint: Remove any citation text or cite in the single line news description like 'The actor and his wife Rupali Baruah were injured in a late-night road accident in Guwahati. [cite' should not contain '[cite' text`,
     tv: `Using ONLY real-time web results get exactly 15 latest entertainment news items about Indian daily soap and TV industry actors trending from the past 24 hours. Each news item must be on a separate line in this exact format:
 [Person Name] - [Single line news description]
 
@@ -121,13 +122,14 @@ Requirements:
 - Use real, well-known Indian TV actors
 - Keep each news item to one line
 - Make news current and  tabloid worthy
-- Single line news description should be meaningfully complete. E.g. 'Mouni Roy - Breaks silence on' is incomplete and should not be sent
-- Return exactly 15 items and return only 1 when news are similar. E.g.
+- Constraint: Single line news description should be meaningfully complete. E.g. 'Mouni Roy - Breaks silence on' is incomplete and should not be sent
+- Return exactly 15 items
+- Constraint: return only 1 when news are similar. E.g.
 Gaurav khanna wins big boss 18
 and
 Gaurav khanna revived his tv career after big boss 18 win
 should result in single news item and not 2
-- Important: Remove any citation text or cite in the single line news description like [cite: 2, 3`,
+-  Constraint: Remove any citation text or cite in the single line news description like 'The actor and his wife Rupali Baruah were injured in a late-night road accident in Guwahati. [cite' should not contain '[cite' text`,
     hollywood: `Using ONLY real-time web results get exactly 15 latest entertainment news items about American Hollywood actors and singers trending from the past 24 hours. Each news item must be on a separate line in this exact format:
 [Person Name] - [Single line news description]
 
@@ -139,13 +141,14 @@ Requirements:
 - Use real, well-known Hollywood celebrities
 - Keep each news item to one line
 - Make news current and tabloid worthy
-- Single line news description should be meaningfully complete. E.g. 'Chris hemsworth - has his son in' is incomplete and should not be sent
-- Return exactly 15 items and return only 1 when news are similar. E.g.
+- Constraint: Single line news description should be meaningfully complete. E.g. 'Chris hemsworth - has his son in' is incomplete and should not be sent
+- Return exactly 15 items
+- Constraint:  return only 1 when news are similar. E.g.
 Killing of Rob Reiner and his wife stun hollywood
 and
 Rob Reiner found dead with his wife, son charged in connection with their murders
 should result in single news item and not 2
-- Important: Remove any citation text or cite in the single line news description like [cite: 2, 3`
+- Constraint: Remove any citation text or cite in the single line news description like 'The actor and his wife Rupali Baruah were injured in a late-night road accident in Guwahati. [cite' should not contain '[cite' text`
   };
 
   const prompt = prompts[category];
