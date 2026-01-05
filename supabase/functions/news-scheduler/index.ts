@@ -109,8 +109,7 @@ Requirements:
 Ranveer Singh - Dhurandhar marches towards Rs 750
 and
 Ranveer Singh - his film Dhurandhar marches towards RS 750 crores mark
-should result in single news item and not 2
-- Constraint: Remove any citation text or cite in the single line news description like 'The actor and his wife Rupali Baruah were injured in a late-night road accident in Guwahati. [cite' should not contain '[cite' text`,
+should result in single news item and not 2`,
     tv: `Using ONLY real-time web results get exactly 15 latest entertainment news items about Indian daily soap and TV industry actors trending from the past 24 hours. Each news item must be on a separate line in this exact format:
 [Person Name] - [Single line news description]
 
@@ -128,8 +127,7 @@ Requirements:
 Gaurav khanna wins big boss 18
 and
 Gaurav khanna revived his tv career after big boss 18 win
-should result in single news item and not 2
--  Constraint: Remove any citation text or cite in the single line news description like 'The actor and his wife Rupali Baruah were injured in a late-night road accident in Guwahati. [cite' should not contain '[cite' text`,
+should result in single news item and not 2`,
     hollywood: `Using ONLY real-time web results get exactly 15 latest entertainment news items about American Hollywood actors and singers trending from the past 24 hours. Each news item must be on a separate line in this exact format:
 [Person Name] - [Single line news description]
 
@@ -147,8 +145,7 @@ Requirements:
 Killing of Rob Reiner and his wife stun hollywood
 and
 Rob Reiner found dead with his wife, son charged in connection with their murders
-should result in single news item and not 2
-- Constraint: Remove any citation text or cite in the single line news description like 'The actor and his wife Rupali Baruah were injured in a late-night road accident in Guwahati. [cite' should not contain '[cite' text`
+should result in single news item and not 2`
   };
 
   const prompt = prompts[category];
@@ -204,20 +201,44 @@ should result in single news item and not 2
       }
 
       const data = await response.json();
-      const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-      const lines = text.split("\n").filter((line: string) => line.trim().length > 0);
-      const newsItems: { news_text: string; person_name: string; search_query: string }[] = [];
-      for (const line of lines) {
-        const match = line.match(/^(?:\d+\.\s*)?(.+?)\s*[-–]\s*(.+)$/);
-        if (match && newsItems.length < 15) {
-          const [, personName, newsText] = match;
-          newsItems.push({
-            news_text: newsText.trim(),
-            person_name: personName.trim(),
-            search_query: `${personName.trim()} ${newsText.trim()}`
-          });
-        }
-      }
+const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+const lines = text.split("\n").filter((line: string) => line.trim().length > 0);
+const newsItems: { news_text: string; person_name: string; search_query: string }[] = [];
+
+for (const line of lines) {
+  const match = line.match(/^(?:\d+\.\s*)?(.+?)\s*[-–]\s*(.+)$/);
+  if (match && newsItems.length < 15) {
+    let [, personName, newsText] = match;
+    personName = personName.trim();
+
+    // find first occurrence of '[' or '[cite' or '[ cite' (case-insensitive)
+    const lower = newsText.toLowerCase();
+    let cutIndex = -1;
+
+    const indexBracket = lower.indexOf('[');
+    if (indexBracket !== -1) cutIndex = indexBracket;
+
+    // also check for explicit '[cite' and '[ cite' but '[' handling above already covers them;
+    // keep checks for clarity and in case you want different behavior later
+    const indexCiteNoSpace = lower.indexOf('[cite');
+    if (indexCiteNoSpace !== -1) cutIndex = cutIndex === -1 ? indexCiteNoSpace : Math.min(cutIndex, indexCiteNoSpace);
+
+    const indexCiteWithSpace = lower.indexOf('[ cite');
+    if (indexCiteWithSpace !== -1) cutIndex = cutIndex === -1 ? indexCiteWithSpace : Math.min(cutIndex, indexCiteWithSpace);
+
+    if (cutIndex !== -1) {
+      newsText = newsText.slice(0, cutIndex);
+    }
+
+    const cleanedNewsText = newsText.trim();
+
+    newsItems.push({
+      news_text: cleanedNewsText,
+      person_name: personName,
+      search_query: `${personName} ${cleanedNewsText}`
+    });
+  }
+}
       return newsItems.slice(0, 15);
     } catch (err) {
       lastError = err;
