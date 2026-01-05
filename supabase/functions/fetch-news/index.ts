@@ -103,7 +103,10 @@ Requirements:
 - Use real, well-known Bollywood celebrities
 - Keep each news item to one line
 - Make news current and tabloid worthy
-- Constraint: Single line news description should be meaningfully complete. E.g. 'Javed Akhtar - threaten' is incomplete and should not be sent
+- Constraint: Grammatical Completeness. The description must be a complete independent clause. It must contain a subject, a functional verb, and an object or context.
+Reject: Fragmented keyword pairs (e.g., "Javed Akhtar - threaten" or "Stock market - rise").
+Accept: Full narrative summaries (e.g., "Javed Akhtar receives a threatening email regarding his recent comments" or "The stock market rose by 2% following the federal announcement").
+Standard of Quality: > If the line were read in isolation, a reader should understand exactly who did what and why, without needing to refer back to the source text.
 - Return exactly 15 items
 - Constraint:  Return only 1 when news are similar. E.g.
 Ranveer Singh - Dhurandhar marches towards Rs 750
@@ -121,7 +124,10 @@ Requirements:
 - Use real, well-known Indian TV actors
 - Keep each news item to one line
 - Make news current and  tabloid worthy
-- Constraint: Single line news description should be meaningfully complete. E.g. 'Mouni Roy - Breaks silence on' is incomplete and should not be sent
+- Constraint: Grammatical Completeness. The description must be a complete independent clause. It must contain a subject, a functional verb, and an object or context.
+Reject: Fragmented keyword pairs (e.g., "Javed Akhtar - threaten" or "Stock market - rise").
+Accept: Full narrative summaries (e.g., "Javed Akhtar receives a threatening email regarding his recent comments" or "The stock market rose by 2% following the federal announcement").
+Standard of Quality: > If the line were read in isolation, a reader should understand exactly who did what and why, without needing to refer back to the source text.
 - Return exactly 15 items
 - Constraint: return only 1 when news are similar. E.g.
 Gaurav khanna wins big boss 18
@@ -139,7 +145,10 @@ Requirements:
 - Use real, well-known Hollywood celebrities
 - Keep each news item to one line
 - Make news current and tabloid worthy
-- Constraint: Single line news description should be meaningfully complete. E.g. 'Chris hemsworth - has his son in' is incomplete and should not be sent
+- Constraint: Grammatical Completeness. The description must be a complete independent clause. It must contain a subject, a functional verb, and an object or context.
+Reject: Fragmented keyword pairs (e.g., "Javed Akhtar - threaten" or "Stock market - rise").
+Accept: Full narrative summaries (e.g., "Javed Akhtar receives a threatening email regarding his recent comments" or "The stock market rose by 2% following the federal announcement").
+Standard of Quality: > If the line were read in isolation, a reader should understand exactly who did what and why, without needing to refer back to the source text.
 - Return exactly 15 items
 - Constraint:  return only 1 when news are similar. E.g.
 Killing of Rob Reiner and his wife stun hollywood
