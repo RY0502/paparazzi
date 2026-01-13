@@ -4,9 +4,35 @@ import type { NewsItem, Category } from '../types';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-const supabase = supabaseUrl && supabaseAnonKey
+let supabase = supabaseUrl && supabaseAnonKey
   ? createClient(supabaseUrl, supabaseAnonKey)
   : null;
+
+function getSupabaseClient() {
+  if (!supabaseUrl || !supabaseAnonKey) {
+    return null;
+  }
+
+  if (!supabase) {
+    supabase = createClient(supabaseUrl, supabaseAnonKey);
+  }
+
+  return supabase;
+}
+
+function resetSupabaseClient() {
+  if (supabase) {
+    supabase = null;
+  }
+}
+
+if (typeof window !== 'undefined') {
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      resetSupabaseClient();
+    }
+  });
+}
 
 const CACHE_DURATION_MS = 60 * 60 * 1000;
 
@@ -24,10 +50,10 @@ export async function fetchNews(category: Category): Promise<NewsItem[]> {
     return cached.data;
   }
 
-  if (!supabase) {
+  const client = getSupabaseClient();
+  if (!client) {
     console.log('Supabase not configured, using mock data');
     const mockData = getMockNews(category);
-    // Update cache even for mock data to prevent race conditions
     inMemoryCache[category] = {
       data: mockData,
       timestamp: now,
@@ -38,7 +64,7 @@ export async function fetchNews(category: Category): Promise<NewsItem[]> {
   try {
     const tableName = `${category}_news`;
 
-    const { data, error } = await supabase
+    const { data, error } = await client
       .from(tableName)
       .select('*')
       .order('created_at', { ascending: false })
@@ -47,7 +73,6 @@ export async function fetchNews(category: Category): Promise<NewsItem[]> {
     if (error) {
       console.error(`Error fetching ${category} news:`, error);
       const mockData = getMockNews(category);
-      // Update cache with mock data on error
       inMemoryCache[category] = {
         data: mockData,
         timestamp: now,
@@ -59,7 +84,6 @@ export async function fetchNews(category: Category): Promise<NewsItem[]> {
 
     if (newsItems.length === 0) {
       const mockData = getMockNews(category);
-      // Update cache with mock data when backend returns empty array
       inMemoryCache[category] = {
         data: mockData,
         timestamp: now,
@@ -67,7 +91,6 @@ export async function fetchNews(category: Category): Promise<NewsItem[]> {
       return mockData;
     }
 
-    // Update cache with real data from backend
     inMemoryCache[category] = {
       data: newsItems,
       timestamp: now,
@@ -77,7 +100,6 @@ export async function fetchNews(category: Category): Promise<NewsItem[]> {
   } catch (err) {
     console.error(`Failed to fetch ${category} news:`, err);
     const mockData = getMockNews(category);
-    // Update cache with mock data on exception
     inMemoryCache[category] = {
       data: mockData,
       timestamp: now,
