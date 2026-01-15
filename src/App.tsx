@@ -51,6 +51,11 @@ function App() {
     setSelectedNews(null);
   };
 
+  const handleNavigateToCategory = (category: Category) => {
+    setActiveTab(category);
+    setSelectedNews(null);
+  };
+
   if (selectedNews) {
     return (
       <NewsDetail
@@ -59,6 +64,7 @@ function App() {
         newsTitle={selectedNews.newsTitle}
         onBack={handleBackFromDetail}
         onCategoryChange={setActiveTab}
+        onNavigateToCategory={handleNavigateToCategory}
       />
     );
   }

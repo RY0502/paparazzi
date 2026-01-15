@@ -9,9 +9,10 @@ interface NewsDetailProps {
   newsTitle: string;
   onBack: () => void;
   onCategoryChange: (category: Category) => void;
+  onNavigateToCategory: (category: Category) => void;
 }
 
-function NewsDetail({ category, personName, newsTitle, onBack, onCategoryChange }: NewsDetailProps) {
+function NewsDetail({ category, personName, newsTitle, onBack, onCategoryChange, onNavigateToCategory }: NewsDetailProps) {
   const [content, setContent] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -119,7 +120,7 @@ function NewsDetail({ category, personName, newsTitle, onBack, onCategoryChange 
             <nav className="flex gap-2">
               <TabButton
                 active={category === 'bollywood'}
-                onClick={() => onCategoryChange('bollywood')}
+                onClick={() => onNavigateToCategory('bollywood')}
                 label={
                   <>
                     <span className="sm:hidden">B'wood</span>
@@ -129,12 +130,12 @@ function NewsDetail({ category, personName, newsTitle, onBack, onCategoryChange 
               />
               <TabButton
                 active={category === 'tv'}
-                onClick={() => onCategoryChange('tv')}
+                onClick={() => onNavigateToCategory('tv')}
                 label="TV"
               />
               <TabButton
                 active={category === 'hollywood'}
-                onClick={() => onCategoryChange('hollywood')}
+                onClick={() => onNavigateToCategory('hollywood')}
                 label={
                   <>
                     <span className="sm:hidden">H'wood</span>
