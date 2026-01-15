@@ -52,6 +52,9 @@ function App() {
   };
 
   const handleNavigateToCategory = (category: Category) => {
+    if (category !== activeTab) {
+      setScrollPosition(0);
+    }
     setActiveTab(category);
     setSelectedNews(null);
   };
