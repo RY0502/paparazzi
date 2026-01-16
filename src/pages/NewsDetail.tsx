@@ -57,8 +57,8 @@ function NewsDetail({ category, personName, newsTitle, onBack, onCategoryChange,
 
       const data = await response.json();
 
-      if (data.status === 200 && data.body?.videoId) {
-        setVideoId(data.body.videoId);
+      if (data.status === 200 && data.videoId) {
+        setVideoId(data.videoId);
       } else if (data.status === 400 || data.status === 500) {
         setVideoError(data.error?.message || 'Unable to fetch video');
       }
