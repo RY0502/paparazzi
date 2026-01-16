@@ -57,9 +57,9 @@ function NewsDetail({ category, personName, newsTitle, onBack, onCategoryChange,
 
       const data = await response.json();
 
-      if (data.status === 200 && data.videoId) {
+      if (response.status === 200 && data.videoId) {
         setVideoId(data.videoId);
-      } else if (data.status === 400 || data.status === 500) {
+      } else if (response.status === 400 || response.status === 500) {
         setVideoError(data.error?.message || 'Unable to fetch video');
       }
     } catch {
@@ -307,7 +307,7 @@ function NewsDetail({ category, personName, newsTitle, onBack, onCategoryChange,
       </main>
 
       {/* Footer */}
-       <footer className="border-t border-white/10 bg-slate-950/30 backdrop-blur-2xl">
+      <footer className="border-t border-white/10 bg-slate-950/30 backdrop-blur-2xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-3">
