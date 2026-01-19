@@ -21,7 +21,7 @@ function NewsDetail({ category, personName, newsTitle, onBack, onCategoryChange,
   const [videoLoading, setVideoLoading] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
 
-  const keywords = ['shows', 'shares', 'video', 'videos', 'clip', 'clips', 'reel', 'reels', 'tape', 'capture', 'caught'];
+  const keywords = ['shows', 'shares', 'video', 'videos', 'clip', 'clips', 'Insta reel', 'Instagaram reel', 'tape', 'capture', 'caught'];
 
   const titleContainsVideoKeyword = keywords.some(keyword =>
     newsTitle.toLowerCase().includes(keyword)
