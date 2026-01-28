@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Loader2, Sparkles, Star } from 'lucide-react';
+import { Loader2, Sparkles, Star, FileText } from 'lucide-react';
 import NewsCard from './components/NewsCard';
 import TabButton from './components/TabButton';
 import NewsDetail from './pages/NewsDetail';
+import NewsletterPage from './pages/NewsletterPage';
 import { fetchNews } from './services/newsService';
 import type { NewsItem, Category } from './types';
 
@@ -16,6 +17,7 @@ function App() {
     newsTitle: string;
   } | null>(null);
   const [scrollPosition, setScrollPosition] = useState(0);
+  const [viewingNewsletter, setViewingNewsletter] = useState(false);
 
   useEffect(() => {
     if (!selectedNews) {
@@ -58,6 +60,12 @@ function App() {
     setActiveTab(category);
     setSelectedNews(null);
   };
+
+  if (viewingNewsletter) {
+    return (
+      <NewsletterPage onBack={() => setViewingNewsletter(false)} />
+    );
+  }
 
   if (selectedNews) {
     return (
@@ -182,6 +190,13 @@ function App() {
                 <p className="text-slate-400 text-sm">Entertainment News</p>
               </div>
             </div>
+            <button
+              onClick={() => setViewingNewsletter(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-rose-500 to-pink-500 text-white rounded-lg hover:shadow-lg hover:shadow-rose-500/50 transition-all duration-300 font-semibold text-sm"
+            >
+              <FileText className="w-4 h-4" />
+              Newsletter
+            </button>
             <p className="text-slate-500 text-sm">
               © 2025 RYaxn. All rights reserved.
             </p>
