@@ -15,15 +15,15 @@ export default function Newsletter({
 }: NewsletterProps) {
   const handleDownload = async () => {
     try {
-      await generateNewsletterPDF(bollywoodNews, tvNews, hollywoodNews);
+      await generateNewsletterPDF();
     } catch (error) {
       console.error('Failed to generate newsletter:', error);
     }
   };
 
-  const bollywood = bollywoodNews.slice(0, 4);
-  const tv = tvNews.slice(0, 3);
-  const hollywood = hollywoodNews.slice(0, 4);
+  const bollywood = bollywoodNews.slice(0, 3);
+  const tv = tvNews.slice(0, 2);
+  const hollywood = hollywoodNews.slice(0, 3);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
@@ -46,37 +46,40 @@ export default function Newsletter({
       </div>
 
       <div id="newsletter-content" className="pt-24 pb-16">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-white rounded-3xl shadow-2xl overflow-hidden p-8 sm:p-12 md:p-16">
-            <div className="text-center mb-12 md:mb-16">
-              <h1 className="text-5xl sm:text-6xl md:text-7xl font-bold bg-gradient-to-r from-rose-600 via-pink-600 to-rose-600 bg-clip-text text-transparent mb-2">
-                Paparazzi
-              </h1>
-              <p className="text-slate-500 text-lg sm:text-xl font-light italic">
-                Where entertainment never sleeps...
-              </p>
-            </div>
-
-            <div className="border-t-2 border-slate-200 pt-12 md:pt-16">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 mb-12 md:mb-16">
-                <NewsCategory title="Bollywood" news={bollywood} />
-                <NewsCategory title="Hollywood" news={hollywood} />
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="bg-white shadow-2xl overflow-hidden" style={{ width: '850px', margin: '0 auto' }}>
+            <div className="border-8 border-black p-8">
+              <div className="border-b-4 border-black pb-4 mb-6">
+                <div className="text-center mb-2">
+                  <div className="text-xs font-bold tracking-widest text-black mb-2">ENTERTAINMENT NEWS DAILY</div>
+                  <h1 className="text-7xl font-black text-black" style={{ letterSpacing: '-2px', lineHeight: '1' }}>
+                    PAPARAZZI
+                  </h1>
+                  <div className="text-xs font-bold tracking-wider text-black mt-2">
+                    {new Date().toLocaleDateString('en-US', {
+                      weekday: 'long',
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                    })}
+                  </div>
+                </div>
+                <div className="border-t-2 border-black mt-3 pt-3 text-center">
+                  <p className="text-sm font-bold italic text-black">Where Entertainment Never Sleeps</p>
+                </div>
               </div>
 
-              <NewsCategory title="TV Updates" news={tv} />
-            </div>
+              <div className="space-y-8">
+                <NewspaperSection title="BOLLYWOOD BUZZ" news={bollywood} />
+                <div className="border-y-2 border-black py-2"></div>
+                <NewspaperSection title="HOLLYWOOD HOTLINE" news={hollywood} />
+                <div className="border-y-2 border-black py-2"></div>
+                <NewspaperSection title="TV UPDATES" news={tv} />
+              </div>
 
-            <div className="mt-12 md:mt-16 pt-8 border-t border-slate-300 text-center">
-              <p className="text-slate-600 text-sm">
-                © 2025 Paparazzi Newsletter. All entertainment rights reserved.
-              </p>
-              <p className="text-slate-500 text-xs mt-2">
-                {new Date().toLocaleDateString('en-US', {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                })}
-              </p>
+              <div className="border-t-4 border-black mt-8 pt-6 text-center">
+                <p className="text-xs font-bold text-black">© 2025 PAPARAZZI ENTERTAINMENT NEWS</p>
+              </div>
             </div>
           </div>
         </div>
@@ -102,37 +105,34 @@ export default function Newsletter({
   );
 }
 
-function NewsCategory({ title, news }: { title: string; news: NewsItem[] }) {
+function NewspaperSection({ title, news }: { title: string; news: NewsItem[] }) {
   return (
     <div>
-      <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-6 relative inline-block">
+      <h2 className="text-3xl font-black text-black mb-6 tracking-tight border-b-2 border-black pb-3">
         {title}
-        <div className="absolute -bottom-2 left-0 w-12 h-1 bg-gradient-to-r from-rose-500 to-pink-500 rounded-full"></div>
       </h2>
-      <div className="mt-8 space-y-6">
-        {news.map((item, index) => (
-          <div key={item.id} className="flex gap-4 sm:gap-6">
-            <div className="flex-shrink-0 w-20 h-20 sm:w-24 sm:h-24 md:w-32 md:h-32">
-              <img
-                src={item.image_url}
-                alt={item.person_name}
-                className="w-full h-full object-cover rounded-lg shadow-md"
-              />
-            </div>
-            <div className="flex-1">
-              <div className="flex items-start gap-2">
-                <div className="bg-gradient-to-r from-rose-500 to-pink-500 text-white font-bold text-xs sm:text-sm rounded-full w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  {index + 1}
-                </div>
-                <div className="flex-1">
-                  <p className="font-bold text-slate-900 text-sm sm:text-base">
-                    {item.person_name}
-                  </p>
-                  <p className="text-slate-700 text-sm sm:text-base leading-relaxed mt-1">
-                    {item.news_text}
-                  </p>
-                </div>
+      <div className="space-y-6">
+        {news.map((item) => (
+          <div key={item.id} className="border-b border-gray-300 pb-6 relative">
+            <div className="grid grid-cols-4 gap-4">
+              <div className="col-span-1">
+                <img
+                  src={item.image_url}
+                  alt={item.person_name}
+                  className="w-full h-32 object-cover border-2 border-black"
+                />
               </div>
+              <div className="col-span-3">
+                <p className="text-sm font-black text-black uppercase tracking-wider mb-2">
+                  {item.person_name}
+                </p>
+                <p className="text-sm leading-relaxed text-black font-serif">
+                  {item.news_text}
+                </p>
+              </div>
+            </div>
+            <div className="absolute bottom-2 right-0 text-xs font-bold italic text-gray-600">
+              ...and more....
             </div>
           </div>
         ))}

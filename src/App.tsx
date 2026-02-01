@@ -74,7 +74,6 @@ function App() {
         personName={selectedNews.personName}
         newsTitle={selectedNews.newsTitle}
         onBack={handleBackFromDetail}
-        onCategoryChange={setActiveTab}
         onNavigateToCategory={handleNavigateToCategory}
       />
     );

@@ -8,11 +8,10 @@ interface NewsDetailProps {
   personName: string;
   newsTitle: string;
   onBack: () => void;
-  onCategoryChange: (category: Category) => void;
   onNavigateToCategory: (category: Category) => void;
 }
 
-function NewsDetail({ category, personName, newsTitle, onBack, onCategoryChange, onNavigateToCategory }: NewsDetailProps) {
+function NewsDetail({ category, personName, newsTitle, onBack, onNavigateToCategory }: NewsDetailProps) {
   const [content, setContent] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
