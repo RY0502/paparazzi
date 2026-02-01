@@ -1,4 +1,4 @@
-import { Download } from 'lucide-react';
+import { Download, Sparkles } from 'lucide-react';
 import { generateNewsletterPDF } from '../utils/newsletterGenerator';
 import type { NewsItem } from '../types';
 
@@ -30,8 +30,13 @@ export default function Newsletter({
       <div className="fixed top-0 left-0 right-0 z-10 bg-slate-950/30 backdrop-blur-2xl border-b border-white/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 sm:h-20">
-            <div className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-rose-500 via-pink-500 to-rose-500 bg-clip-text text-transparent">
-              Paparazzi
+            <div className="flex items-center gap-3">
+              <div className="bg-gradient-to-r from-rose-500 to-pink-500 p-2 rounded-lg">
+                <Sparkles className="w-5 h-5 text-white" />
+              </div>
+              <div className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-rose-500 via-pink-500 to-rose-500 bg-clip-text text-transparent">
+                Paparazzi
+              </div>
             </div>
             <button
               onClick={handleDownload}
@@ -45,58 +50,65 @@ export default function Newsletter({
         </div>
       </div>
 
-      <div id="newsletter-content" className="pt-24 pb-16">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-white shadow-2xl overflow-hidden" style={{ width: '850px', margin: '0 auto' }}>
-            <div className="border-8 border-black p-8">
-              <div className="border-b-4 border-black pb-4 mb-6">
-                <div className="text-center mb-2">
-                  <div className="text-xs font-bold tracking-widest text-black mb-2">ENTERTAINMENT NEWS DAILY</div>
-                  <h1 className="text-7xl font-black text-black" style={{ letterSpacing: '-2px', lineHeight: '1' }}>
-                    PAPARAZZI
-                  </h1>
-                  <div className="text-xs font-bold tracking-wider text-black mt-2">
-                    {new Date().toLocaleDateString('en-US', {
-                      weekday: 'long',
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                    })}
-                  </div>
-                </div>
-                <div className="border-t-2 border-black mt-3 pt-3 text-center">
-                  <p className="text-sm font-bold italic text-black">Where Entertainment Never Sleeps</p>
-                </div>
-              </div>
-
-              <div className="space-y-8">
-                <NewspaperSection title="BOLLYWOOD BUZZ" news={bollywood} />
-                <div className="border-y-2 border-black py-2"></div>
-                <NewspaperSection title="HOLLYWOOD HOTLINE" news={hollywood} />
-                <div className="border-y-2 border-black py-2"></div>
-                <NewspaperSection title="TV UPDATES" news={tv} />
-              </div>
-
-              <div className="border-t-4 border-black mt-8 pt-6 text-center">
-                <p className="text-xs font-bold text-black">© 2025 PAPARAZZI ENTERTAINMENT NEWS</p>
-              </div>
-            </div>
-          </div>
-        </div>
+      <div id="newsletter-content" className="hidden">
+        <NewsletterContent bollywood={bollywood} tv={tv} hollywood={hollywood} />
       </div>
 
-      <footer className="border-t border-white/10 bg-slate-950/30 backdrop-blur-2xl">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="text-center">
+      <main className="pt-24 pb-20 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-16">
+            <h1 className="text-5xl sm:text-6xl font-black bg-gradient-to-r from-rose-500 via-pink-500 to-rose-500 bg-clip-text text-transparent mb-4">
+              Paparazzi Newsletter
+            </h1>
+            <p className="text-xl text-slate-400">
+              Your daily dose of entertainment gossip
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <PreviewSection title="BOLLYWOOD BUZZ" news={bollywood} icon="🎬" color="from-rose-500 to-pink-500" />
+            <PreviewSection title="HOLLYWOOD HOTLINE" news={hollywood} icon="🌟" color="from-amber-500 to-orange-500" />
+            <PreviewSection title="TV UPDATES" news={tv} icon="📺" color="from-blue-500 to-cyan-500" />
+          </div>
+
+          <div className="text-center mt-16">
             <button
               onClick={handleDownload}
-              className="inline-flex items-center gap-2 px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-rose-500 to-pink-500 text-white rounded-lg hover:shadow-lg hover:shadow-rose-500/50 transition-all duration-300 font-semibold"
+              className="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-rose-500 to-pink-500 text-white rounded-xl hover:shadow-2xl hover:shadow-rose-500/50 transition-all duration-300 font-bold text-lg"
             >
-              <Download className="w-5 h-5" />
-              Download Newsletter
+              <Download className="w-6 h-6" />
+              Download Newsletter as Image
             </button>
             <p className="text-slate-500 text-sm mt-6">
-              © 2025 Paparazzi. Entertainment News.
+              Get your newsletter in high-quality PNG format
+            </p>
+          </div>
+        </div>
+      </main>
+
+      <footer className="border-t border-white/10 bg-slate-950/30 backdrop-blur-2xl">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 mb-8">
+            <div>
+              <h3 className="text-white font-bold mb-4">About</h3>
+              <p className="text-slate-400 text-sm">Your premium source for entertainment news and celebrity updates.</p>
+            </div>
+            <div>
+              <h3 className="text-white font-bold mb-4">Categories</h3>
+              <ul className="text-slate-400 text-sm space-y-2">
+                <li>Bollywood</li>
+                <li>Hollywood</li>
+                <li>TV Updates</li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="text-white font-bold mb-4">Newsletter</h3>
+              <p className="text-slate-400 text-sm">Download today and stay updated with the latest entertainment buzz.</p>
+            </div>
+          </div>
+          <div className="border-t border-white/10 pt-8 text-center">
+            <p className="text-slate-500 text-sm">
+              © 2025 Paparazzi. All rights reserved.
             </p>
           </div>
         </div>
@@ -105,37 +117,98 @@ export default function Newsletter({
   );
 }
 
-function NewspaperSection({ title, news }: { title: string; news: NewsItem[] }) {
+function NewsletterContent({ bollywood, tv, hollywood }: { bollywood: NewsItem[]; tv: NewsItem[]; hollywood: NewsItem[] }) {
+  return (
+    <div className="bg-white" style={{ width: '900px' }}>
+      <div className="bg-gradient-to-r from-rose-600 via-pink-600 to-rose-600 p-12 text-white">
+        <div className="text-center mb-4">
+          <div className="text-sm font-bold tracking-widest mb-3">ENTERTAINMENT NEWS DAILY</div>
+          <h1 className="text-8xl font-black" style={{ letterSpacing: '-2px', lineHeight: '1' }}>
+            PAPARAZZI
+          </h1>
+          <div className="text-sm font-bold tracking-wider mt-4">
+            {new Date().toLocaleDateString('en-US', {
+              weekday: 'long',
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+            })}
+          </div>
+        </div>
+        <div className="border-t border-white/30 mt-4 pt-4 text-center">
+          <p className="text-base font-semibold italic">Where Entertainment Never Sleeps</p>
+        </div>
+      </div>
+
+      <div className="p-10">
+        <NewsletterSection title="BOLLYWOOD BUZZ" news={bollywood} bgColor="bg-red-50" accentColor="border-red-600" />
+        <div className="my-8 border-t-4 border-gray-300"></div>
+        <NewsletterSection title="HOLLYWOOD HOTLINE" news={hollywood} bgColor="bg-amber-50" accentColor="border-amber-600" />
+        <div className="my-8 border-t-4 border-gray-300"></div>
+        <NewsletterSection title="TV UPDATES" news={tv} bgColor="bg-blue-50" accentColor="border-blue-600" />
+
+        <div className="mt-12 pt-8 border-t-4 border-gray-800 text-center">
+          <p className="text-xs font-bold text-gray-800">© 2025 PAPARAZZI ENTERTAINMENT NEWS</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function NewsletterSection({ title, news, accentColor }: { title: string; news: NewsItem[]; bgColor?: string; accentColor: string }) {
   return (
     <div>
-      <h2 className="text-3xl font-black text-black mb-6 tracking-tight border-b-2 border-black pb-3">
+      <h2 className={`text-4xl font-black text-gray-900 mb-8 pb-4 border-b-4 ${accentColor}`}>
         {title}
       </h2>
       <div className="space-y-6">
         {news.map((item) => (
-          <div key={item.id} className="border-b border-gray-300 pb-6 relative">
-            <div className="grid grid-cols-4 gap-4">
+          <div key={item.id} className="border-b-2 border-gray-200 pb-6">
+            <div className="grid grid-cols-5 gap-4">
               <div className="col-span-1">
                 <img
                   src={item.image_url}
                   alt={item.person_name}
-                  className="w-full h-32 object-cover border-2 border-black"
+                  className="w-full h-40 object-cover border-3 border-gray-800 shadow-lg"
                 />
               </div>
-              <div className="col-span-3">
-                <p className="text-sm font-black text-black uppercase tracking-wider mb-2">
+              <div className="col-span-4">
+                <p className="text-lg font-black text-gray-900 uppercase tracking-wide mb-2">
                   {item.person_name}
                 </p>
-                <p className="text-sm leading-relaxed text-black font-serif">
+                <p className="text-base leading-relaxed text-gray-800 font-serif">
                   {item.news_text}
                 </p>
               </div>
             </div>
-            <div className="absolute bottom-2 right-0 text-xs font-bold italic text-gray-600">
-              ...and more....
-            </div>
           </div>
         ))}
+        <div className="text-right pt-4">
+          <p className="text-lg font-black text-gray-600 italic">...and more....</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PreviewSection({ title, news, icon, color }: { title: string; news: NewsItem[]; icon: string; color: string }) {
+  return (
+    <div className={`bg-gradient-to-br ${color} rounded-2xl p-8 shadow-xl hover:shadow-2xl transition-shadow`}>
+      <div className="mb-6">
+        <div className="text-4xl mb-3">{icon}</div>
+        <h2 className="text-2xl font-black text-white mb-2">{title}</h2>
+        <div className="h-1 w-12 bg-white/40 rounded-full"></div>
+      </div>
+      <div className="space-y-4">
+        {news.map((item) => (
+          <div key={item.id} className="bg-white/10 backdrop-blur rounded-lg p-4 border border-white/20">
+            <p className="text-sm font-bold text-white/90 mb-2">{item.person_name}</p>
+            <p className="text-xs text-white/80 line-clamp-2">{item.news_text}</p>
+          </div>
+        ))}
+      </div>
+      <div className="mt-6 pt-4 border-t border-white/20">
+        <p className="text-sm font-bold text-white/70 italic">...and more....</p>
       </div>
     </div>
   );
