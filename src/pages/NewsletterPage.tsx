@@ -68,13 +68,19 @@ export default function NewsletterPage({ onBack }: NewsletterPageProps) {
 
   return (
     <div>
-      <button
-        onClick={onBack}
-        className="fixed top-8 left-8 z-50 flex items-center gap-2 px-4 py-2 text-slate-400 hover:text-white transition-colors bg-slate-950/50 hover:bg-slate-950/70 rounded-lg backdrop-blur-sm border border-white/10"
-      >
-        <ArrowLeft className="w-5 h-5" />
-        <span className="hidden sm:inline">Back</span>
-      </button>
+      <div className="fixed top-0 left-0 right-0 z-10 bg-slate-950/30 backdrop-blur-2xl border-b border-white/10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center h-16 sm:h-20 gap-4">
+            <button
+              onClick={onBack}
+              className="flex items-center gap-2 px-4 py-2 text-slate-400 hover:text-white transition-colors bg-slate-950/50 hover:bg-slate-950/70 rounded-lg backdrop-blur-sm border border-white/10"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              <span className="hidden sm:inline">Back</span>
+            </button>
+          </div>
+        </div>
+      </div>
       <Newsletter
         bollywoodNews={bollywoodNews}
         tvNews={tvNews}

@@ -54,7 +54,7 @@ export default function Newsletter({
         <NewsletterContent bollywood={bollywood} tv={tv} hollywood={hollywood} />
       </div>
 
-      <main className="pt-24 pb-20 px-4 sm:px-6 lg:px-8">
+      <main className="pt-40 pb-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
             <h1 className="text-5xl sm:text-6xl font-black bg-gradient-to-r from-rose-500 via-pink-500 to-rose-500 bg-clip-text text-transparent mb-4">
@@ -119,73 +119,62 @@ export default function Newsletter({
 
 function NewsletterContent({ bollywood, tv, hollywood }: { bollywood: NewsItem[]; tv: NewsItem[]; hollywood: NewsItem[] }) {
   return (
-    <div className="bg-white" style={{ width: '900px' }}>
-      <div className="bg-gradient-to-r from-rose-600 via-pink-600 to-rose-600 p-12 text-white">
-        <div className="text-center mb-4">
-          <div className="text-sm font-bold tracking-widest mb-3">ENTERTAINMENT NEWS DAILY</div>
-          <h1 className="text-8xl font-black" style={{ letterSpacing: '-2px', lineHeight: '1' }}>
-            PAPARAZZI
+    <div className="bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950" style={{ width: '1200px', minHeight: '100vh' }}>
+      <div className="pt-12 px-12">
+        <div className="text-center mb-12">
+          <h1 className="text-6xl font-black bg-gradient-to-r from-rose-500 via-pink-500 to-rose-500 bg-clip-text text-transparent mb-4">
+            Paparazzi Newsletter
           </h1>
-          <div className="text-sm font-bold tracking-wider mt-4">
-            {new Date().toLocaleDateString('en-US', {
-              weekday: 'long',
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric',
-            })}
-          </div>
+          <p className="text-xl text-slate-400">
+            Your daily dose of entertainment gossip
+          </p>
         </div>
-        <div className="border-t border-white/30 mt-4 pt-4 text-center">
-          <p className="text-base font-semibold italic">Where Entertainment Never Sleeps</p>
+
+        <div className="grid grid-cols-3 gap-8 mb-12">
+          <PrintPreviewSection title="BOLLYWOOD BUZZ" news={bollywood} icon="🎬" color="from-rose-500 to-pink-500" />
+          <PrintPreviewSection title="HOLLYWOOD HOTLINE" news={hollywood} icon="🌟" color="from-amber-500 to-orange-500" />
+          <PrintPreviewSection title="TV UPDATES" news={tv} icon="📺" color="from-blue-500 to-cyan-500" />
         </div>
-      </div>
 
-      <div className="p-10">
-        <NewsletterSection title="BOLLYWOOD BUZZ" news={bollywood} bgColor="bg-red-50" accentColor="border-red-600" />
-        <div className="my-8 border-t-4 border-gray-300"></div>
-        <NewsletterSection title="HOLLYWOOD HOTLINE" news={hollywood} bgColor="bg-amber-50" accentColor="border-amber-600" />
-        <div className="my-8 border-t-4 border-gray-300"></div>
-        <NewsletterSection title="TV UPDATES" news={tv} bgColor="bg-blue-50" accentColor="border-blue-600" />
-
-        <div className="mt-12 pt-8 border-t-4 border-gray-800 text-center">
-          <p className="text-xs font-bold text-gray-800">© 2025 PAPARAZZI ENTERTAINMENT NEWS</p>
+        <div className="text-center mt-12 pt-8 border-t border-white/10">
+          <p className="text-slate-500 text-sm">
+            © 2025 Paparazzi. All rights reserved.
+          </p>
         </div>
       </div>
     </div>
   );
 }
 
-function NewsletterSection({ title, news, accentColor }: { title: string; news: NewsItem[]; bgColor?: string; accentColor: string }) {
+function PrintPreviewSection({ title, news, icon, color }: { title: string; news: NewsItem[]; icon: string; color: string }) {
   return (
-    <div>
-      <h2 className={`text-4xl font-black text-gray-900 mb-8 pb-4 border-b-4 ${accentColor}`}>
-        {title}
-      </h2>
-      <div className="space-y-6">
+    <div className={`bg-gradient-to-br ${color} rounded-2xl p-8 shadow-xl`}>
+      <div className="mb-6">
+        <div className="text-4xl mb-3">{icon}</div>
+        <h2 className="text-2xl font-black text-white mb-2">{title}</h2>
+        <div className="h-1 w-12 bg-white/40 rounded-full"></div>
+      </div>
+      <div className="space-y-4">
         {news.map((item) => (
-          <div key={item.id} className="border-b-2 border-gray-200 pb-6">
-            <div className="grid grid-cols-5 gap-4">
-              <div className="col-span-1">
-                <img
-                  src={item.image_url}
-                  alt={item.person_name}
-                  className="w-full h-40 object-cover border-3 border-gray-800 shadow-lg"
-                />
-              </div>
-              <div className="col-span-4">
-                <p className="text-lg font-black text-gray-900 uppercase tracking-wide mb-2">
-                  {item.person_name}
-                </p>
-                <p className="text-base leading-relaxed text-gray-800 font-serif">
-                  {item.news_text}
-                </p>
+          <div key={item.id} className="bg-white/10 backdrop-blur rounded-lg overflow-hidden border border-white/20">
+            <div className="flex gap-3 h-24">
+              <img
+                src={item.image_url}
+                alt={item.person_name}
+                className="w-24 h-24 object-cover flex-shrink-0"
+              />
+              <div className="flex flex-col justify-between py-2 pr-2 flex-1 min-w-0">
+                <div>
+                  <p className="text-xs font-bold text-white/90 mb-1">{item.person_name}</p>
+                  <p className="text-xs text-white/80 line-clamp-2">{item.news_text}</p>
+                </div>
               </div>
             </div>
           </div>
         ))}
-        <div className="text-right pt-4">
-          <p className="text-lg font-black text-gray-600 italic">and more....</p>
-        </div>
+      </div>
+      <div className="mt-6 pt-4 border-t border-white/20">
+        <p className="text-sm font-bold text-white/70 italic">and more....</p>
       </div>
     </div>
   );

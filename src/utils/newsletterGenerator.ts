@@ -17,7 +17,7 @@ export async function generateNewsletterPDF() {
       scale: 2,
       useCORS: true,
       logging: false,
-      backgroundColor: '#ffffff',
+      backgroundColor: '#0f172a',
       allowTaint: true,
     });
 
