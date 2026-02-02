@@ -70,7 +70,7 @@ export default function NewsletterPage({ onBack }: NewsletterPageProps) {
     <div>
       <button
         onClick={onBack}
-        className="fixed top-8 left-8 z-20 flex items-center gap-2 px-4 py-2 text-slate-400 hover:text-white transition-colors bg-slate-950/50 hover:bg-slate-950/70 rounded-lg backdrop-blur-sm border border-white/10"
+        className="fixed top-8 left-8 z-50 flex items-center gap-2 px-4 py-2 text-slate-400 hover:text-white transition-colors bg-slate-950/50 hover:bg-slate-950/70 rounded-lg backdrop-blur-sm border border-white/10"
       >
         <ArrowLeft className="w-5 h-5" />
         <span className="hidden sm:inline">Back</span>

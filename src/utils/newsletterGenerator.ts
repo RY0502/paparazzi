@@ -7,18 +7,30 @@ export async function generateNewsletterPDF() {
     throw new Error('Newsletter content not found');
   }
 
-  const canvas = await html2canvas(element, {
-    scale: 2,
-    useCORS: true,
-    logging: false,
-    backgroundColor: '#ffffff',
-  });
+  const wasHidden = element.classList.contains('hidden');
+  if (wasHidden) {
+    element.classList.remove('hidden');
+  }
 
-  const image = canvas.toDataURL('image/png');
-  const link = document.createElement('a');
-  link.href = image;
-  link.download = `Paparazzi-Newsletter-${new Date().toISOString().split('T')[0]}.png`;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+  try {
+    const canvas = await html2canvas(element, {
+      scale: 2,
+      useCORS: true,
+      logging: false,
+      backgroundColor: '#ffffff',
+      allowTaint: true,
+    });
+
+    const image = canvas.toDataURL('image/png');
+    const link = document.createElement('a');
+    link.href = image;
+    link.download = `Paparazzi-Newsletter-${new Date().toISOString().split('T')[0]}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  } finally {
+    if (wasHidden) {
+      element.classList.add('hidden');
+    }
+  }
 }

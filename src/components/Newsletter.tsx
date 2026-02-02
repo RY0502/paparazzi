@@ -22,7 +22,7 @@ export default function Newsletter({
   };
 
   const bollywood = bollywoodNews.slice(0, 3);
-  const tv = tvNews.slice(0, 2);
+  const tv = tvNews.slice(0, 3);
   const hollywood = hollywoodNews.slice(0, 3);
 
   return (
@@ -184,7 +184,7 @@ function NewsletterSection({ title, news, accentColor }: { title: string; news: 
           </div>
         ))}
         <div className="text-right pt-4">
-          <p className="text-lg font-black text-gray-600 italic">...and more....</p>
+          <p className="text-lg font-black text-gray-600 italic">and more....</p>
         </div>
       </div>
     </div>
@@ -201,14 +201,25 @@ function PreviewSection({ title, news, icon, color }: { title: string; news: New
       </div>
       <div className="space-y-4">
         {news.map((item) => (
-          <div key={item.id} className="bg-white/10 backdrop-blur rounded-lg p-4 border border-white/20">
-            <p className="text-sm font-bold text-white/90 mb-2">{item.person_name}</p>
-            <p className="text-xs text-white/80 line-clamp-2">{item.news_text}</p>
+          <div key={item.id} className="bg-white/10 backdrop-blur rounded-lg overflow-hidden border border-white/20">
+            <div className="flex gap-3 h-24">
+              <img
+                src={item.image_url}
+                alt={item.person_name}
+                className="w-24 h-24 object-cover flex-shrink-0"
+              />
+              <div className="flex flex-col justify-between py-2 pr-2 flex-1 min-w-0">
+                <div>
+                  <p className="text-xs font-bold text-white/90 mb-1">{item.person_name}</p>
+                  <p className="text-xs text-white/80 line-clamp-2">{item.news_text}</p>
+                </div>
+              </div>
+            </div>
           </div>
         ))}
       </div>
       <div className="mt-6 pt-4 border-t border-white/20">
-        <p className="text-sm font-bold text-white/70 italic">...and more....</p>
+        <p className="text-sm font-bold text-white/70 italic">and more....</p>
       </div>
     </div>
   );
