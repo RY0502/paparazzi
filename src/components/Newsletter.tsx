@@ -119,10 +119,15 @@ export default function Newsletter({
 
 function NewsletterContent({ bollywood, tv, hollywood }: { bollywood: NewsItem[]; tv: NewsItem[]; hollywood: NewsItem[] }) {
   return (
-    <div className="bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950" style={{ width: '1200px', minHeight: '100vh' }}>
+    <div className="bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950" style={{ width: '1200px', paddingBottom: '100px' }}>
       <div className="pt-12 px-12">
         <div className="text-center mb-12">
-          <h1 className="text-6xl font-black bg-gradient-to-r from-rose-500 via-pink-500 to-rose-500 bg-clip-text text-transparent mb-4">
+          <h1 className="text-6xl font-black text-transparent mb-4" style={{
+            backgroundImage: 'linear-gradient(to right, #f43f5e, #ec4899, #f43f5e)',
+            backgroundClip: 'text',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent'
+          }}>
             Paparazzi Newsletter
           </h1>
           <p className="text-xl text-slate-400">
@@ -136,8 +141,8 @@ function NewsletterContent({ bollywood, tv, hollywood }: { bollywood: NewsItem[]
           <PrintPreviewSection title="TV UPDATES" news={tv} icon="📺" color="from-blue-500 to-cyan-500" />
         </div>
 
-        <div className="text-center mt-12 pt-8 border-t border-white/10">
-          <p className="text-slate-500 text-sm">
+        <div className="text-center mt-12 pt-12 pb-12 border-t border-white/10">
+          <p className="text-slate-400 text-base">
             © 2025 Paparazzi. All rights reserved.
           </p>
         </div>
@@ -157,17 +162,17 @@ function PrintPreviewSection({ title, news, icon, color }: { title: string; news
       <div className="space-y-4">
         {news.map((item) => (
           <div key={item.id} className="bg-white/10 backdrop-blur rounded-lg overflow-hidden border border-white/20">
-            <div className="flex gap-3 h-24">
-              <img
-                src={item.image_url}
-                alt={item.person_name}
-                className="w-24 h-24 object-cover flex-shrink-0"
-              />
-              <div className="flex flex-col justify-between py-2 pr-2 flex-1 min-w-0">
-                <div>
-                  <p className="text-xs font-bold text-white/90 mb-1">{item.person_name}</p>
-                  <p className="text-xs text-white/80 line-clamp-2">{item.news_text}</p>
-                </div>
+            <div className="flex gap-3 h-32">
+              <div className="w-32 h-32 flex-shrink-0 overflow-hidden rounded">
+                <img
+                  src={item.image_url}
+                  alt={item.person_name}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div className="flex flex-col justify-start py-2 pr-2 flex-1 min-w-0">
+                <p className="text-sm font-bold text-white/90 mb-1">{item.person_name}</p>
+                <p className="text-xs text-white/80 leading-relaxed">{item.news_text}</p>
               </div>
             </div>
           </div>
