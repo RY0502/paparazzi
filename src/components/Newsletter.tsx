@@ -159,8 +159,8 @@ function PrintPreviewSection({ title, news, icon, color }: { title: string; news
       <div className="space-y-4">
         {news.map((item) => (
           <div key={item.id} className="bg-white/10 backdrop-blur rounded-lg overflow-hidden border border-white/20">
-            <div className="flex gap-3 h-34">
-              <div className="w-36 h-34 flex-shrink-0 overflow-hidden rounded">
+            <div className="flex gap-3 h-32">
+              <div className="w-34 h-32 flex-shrink-0 overflow-hidden rounded">
                 <img
                   src={item.image_url}
                   alt={item.person_name}
