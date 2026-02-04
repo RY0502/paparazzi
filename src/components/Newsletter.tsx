@@ -130,10 +130,10 @@ function NewsletterContent({ bollywood, tv, hollywood }: { bollywood: NewsItem[]
           </p>
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 mb-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 mb-12">
           <PrintPreviewSection title="BOLLYWOOD BUZZ" news={bollywood} icon="🎬" color="from-rose-500 to-pink-500" />
           <PrintPreviewSection title="HOLLYWOOD HOTLINE" news={hollywood} icon="🌟" color="from-amber-500 to-orange-500" />
-          <div className="col-span-2 lg:col-span-1 mx-auto w-full lg:w-auto">
+            <div className="col-span-1 md:col-span-2 lg:col-span-1 mx-auto w-full md:w-auto">
             <PrintPreviewSection title="TV UPDATES" news={tv} icon="📺" color="from-blue-500 to-cyan-500" />
           </div>
         </div>
