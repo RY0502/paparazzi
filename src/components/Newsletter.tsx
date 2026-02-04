@@ -168,8 +168,8 @@ function PrintPreviewSection({ title, news, icon, color }: { title: string; news
                 />
               </div>
               <div className="flex flex-col justify-start py-2 pr-2 flex-1 min-w-0">
-                <p className="text-sm font-bold text-white/90 mb-1">{item.person_name}</p>
-                <p className="text-sm text-white/80 leading-relaxed">{item.news_text}</p>
+                <p className="text-base font-bold text-white/90 mb-1">{item.person_name}</p>
+                <p className="text-base text-white/80 leading-relaxed">{item.news_text}</p>
               </div>
             </div>
           </div>
