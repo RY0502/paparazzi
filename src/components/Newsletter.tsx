@@ -119,25 +119,27 @@ export default function Newsletter({
 
 function NewsletterContent({ bollywood, tv, hollywood }: { bollywood: NewsItem[]; tv: NewsItem[]; hollywood: NewsItem[] }) {
   return (
-    <div className="bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950" style={{ width: '1200px', paddingBottom: '100px' }}>
-      <div className="pt-12 px-12">
+    <div className="bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 w-full max-w-6xl mx-auto" style={{ paddingBottom: '100px' }}>
+      <div className="pt-12 px-6 md:px-12">
         <div className="text-center mb-12">
-          <h1 className="text-6xl font-black text-white mb-4">
+          <h1 className="text-4xl md:text-6xl font-black text-white mb-4 break-words">
             Paparazzi Newsletter
           </h1>
-          <p className="text-xl text-slate-400">
+          <p className="text-lg md:text-xl text-slate-400">
             Your daily dose of entertainment gossip
           </p>
         </div>
 
-        <div className="grid grid-cols-3 gap-8 mb-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 mb-12">
           <PrintPreviewSection title="BOLLYWOOD BUZZ" news={bollywood} icon="🎬" color="from-rose-500 to-pink-500" />
           <PrintPreviewSection title="HOLLYWOOD HOTLINE" news={hollywood} icon="🌟" color="from-amber-500 to-orange-500" />
-          <PrintPreviewSection title="TV UPDATES" news={tv} icon="📺" color="from-blue-500 to-cyan-500" />
+          <div className="col-span-1 md:col-span-2 lg:col-span-1 mx-auto w-full md:w-auto">
+            <PrintPreviewSection title="TV UPDATES" news={tv} icon="📺" color="from-blue-500 to-cyan-500" />
+          </div>
         </div>
 
         <div className="text-center mt-12 pt-12 pb-12 border-t border-white/10">
-          <p className="text-slate-400 text-base">
+          <p className="text-slate-400 text-base break-words">
             © 2025 Paparazzi. All rights reserved.
           </p>
         </div>
