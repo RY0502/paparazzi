@@ -159,8 +159,8 @@ function PrintPreviewSection({ title, news, icon, color }: { title: string; news
       <div className="space-y-4">
         {news.map((item) => (
           <div key={item.id} className="bg-white/10 backdrop-blur rounded-lg overflow-hidden border border-white/20">
-            <div className="flex gap-3 h-32">
-              <div className="w-32 h-32 flex-shrink-0 overflow-hidden rounded">
+            <div className="flex gap-3 h-34">
+              <div className="w-36 h-34 flex-shrink-0 overflow-hidden rounded">
                 <img
                   src={item.image_url}
                   alt={item.person_name}
@@ -169,7 +169,7 @@ function PrintPreviewSection({ title, news, icon, color }: { title: string; news
               </div>
               <div className="flex flex-col justify-start py-2 pr-2 flex-1 min-w-0">
                 <p className="text-sm font-bold text-white/90 mb-1">{item.person_name}</p>
-                <p className="text-xs text-white/80 leading-relaxed">{item.news_text}</p>
+                <p className="text-sm text-white/80 leading-relaxed">{item.news_text}</p>
               </div>
             </div>
           </div>
