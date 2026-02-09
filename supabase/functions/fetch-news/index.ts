@@ -506,9 +506,12 @@ async function updateNewsForCategory(supabase: any, category: string) {
       if (shouldAttachVideo(item.news_text)) {
         const yt = await ytSearch(item.search_query || `${item.person_name} ${item.news_text}`);
         if (yt) {
-          const isSim = await verifySimilarYesNo(item.search_query || `${item.person_name} ${item.news_text}`, yt.title);
+          const q = item.search_query || `${item.person_name} ${item.news_text}`;
+          const isSim = await verifySimilarYesNo(q, yt.title);
           if (isSim) {
             youtube_url = yt.url;
+          } else {
+            console.log(`Not saving YouTube URL: LLM said "${q}" and "${yt.title}" are not similar`);
           }
         }
       }
