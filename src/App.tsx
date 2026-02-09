@@ -58,6 +58,29 @@ function App() {
   }, []);
 
   useEffect(() => {
+    (async () => {
+      if (typeof window === 'undefined') return;
+      if (notifsEnabled) return;
+      const autoDone = localStorage.getItem('notifAutoPromptDone') === '1';
+      if (autoDone) return;
+      const ua = navigator.userAgent || '';
+      const isIOS = /iphone|ipad|ipod/i.test(ua);
+      const standalone =
+        ((window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
+        ((navigator as any).standalone === true));
+      if (isIOS && !standalone) return;
+      if (Notification.permission === 'granted') return;
+      if (Notification.permission === 'denied') return;
+      const res = await enableNotifications();
+      if (res.success) {
+        setNotifsEnabled(true);
+        localStorage.setItem('notifEnabled', '1');
+      }
+      localStorage.setItem('notifAutoPromptDone', '1');
+    })();
+  }, [notifsEnabled]);
+
+  useEffect(() => {
     const ua = typeof navigator !== 'undefined' ? navigator.userAgent || '' : '';
     const isIOS = /iphone|ipad|ipod/i.test(ua);
     const standalone = (typeof window !== 'undefined' &&

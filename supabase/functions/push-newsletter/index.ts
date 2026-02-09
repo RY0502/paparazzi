@@ -39,12 +39,17 @@ function buildPayload(stories: Awaited<ReturnType<typeof getTopStories>>) {
   const b = pick(stories["bollywood"]);
   const t = pick(stories["tv"]);
   const h = pick(stories["hollywood"]);
-  const parts = [
-    b ? `Bollywood: ${b.person_name} — ${b.news_text}` : null,
-    t ? `TV: ${t.person_name} — ${t.news_text}` : null,
-    h ? `Hollywood: ${h.person_name} — ${h.news_text}` : null,
-  ].filter(Boolean);
-  const body = parts.join(" • ");
+  const blocks: string[] = [];
+  if (b) {
+    blocks.push(`BOLLYWOOD\n• ${b.person_name} — ${b.news_text}`);
+  }
+  if (h) {
+    blocks.push(`HOLLYWOOD\n• ${h.person_name} — ${h.news_text}`);
+  }
+  if (t) {
+    blocks.push(`TV\n• ${t.person_name} — ${t.news_text}`);
+  }
+  const body = blocks.join("\n\n");
   const image = (b && b.image_url) || (t && t.image_url) || (h && h.image_url) || undefined;
   return {
     title: "Paparazzi Daily • Top Stories",
