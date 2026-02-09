@@ -490,8 +490,15 @@ async function updateNewsForCategory(supabase: any, category: string) {
         body: payload
       });
       if (!res.ok) return false;
-      const text = (await res.text()).trim().toLowerCase();
-      return text === 'yes';
+      let value = '';
+      try {
+        const j = await res.json();
+        value = String(j?.json ?? '');
+      } catch {
+        value = await res.text();
+      }
+      const norm = value.replace(/<[^>]*>/g, '').trim().toLowerCase();
+      return norm === 'yes';
     };
     const newsWithImages = await Promise.all(newsItems.map(async (item) => {
       const image_url = await fetchPersonImage(item.person_name);

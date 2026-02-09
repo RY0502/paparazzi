@@ -453,17 +453,90 @@ async function updateNewsForCategory(supabase: any, category: string) {
     console.log(`Fetching news for ${category}...`);
     const newsItems = await fetchFromGemini(category);
     console.log(`Fetched ${newsItems.length} news items for ${category}`);
-    const newsWithImages = await Promise.all(newsItems.map(async (item) => ({
-      ...item,
-      image_url: await fetchPersonImage(item.person_name),
-      created_at: new Date().toISOString()
-    })));
+    const VIDEO_KEYWORDS = ['shows','shares','shared','video','videos','clip','clips','reels','tape','captured','caught','camera','tik tok','tik-tok','footage','reel','videotape','instagram', 'insta'];
+    const YT_API_KEY = Deno.env.get('YOUTUBE_API_KEY') || '';
+    const OPENROUTER_PROXY = Deno.env.get('OPENROUTER_PROXY') || '';
+    const ytSearch = async (q: string): Promise<{ url: string; title: string } | null> => {
+      if (!YT_API_KEY) return null;
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 6000);
+      try {
+        const url =
+          'https://www.googleapis.com/youtube/v3/search' +
+          `?part=snippet&type=video&maxResults=1&q=${encodeURIComponent(q)}` +
+          `&key=${encodeURIComponent(YT_API_KEY)}`;
+        const r = await fetch(url, { signal: controller.signal });
+        clearTimeout(timeout);
+        if (!r.ok) return null;
+        const data = await r.json().catch(() => null);
+        const id = data?.items?.[0]?.id?.videoId;
+        const title = data?.items?.[0]?.snippet?.title;
+        return id && title ? { url: `https://www.youtube.com/watch?v=${id}`, title } : null;
+      } catch {
+        clearTimeout(timeout);
+        return null;
+      }
+    };
+    const shouldAttachVideo = (text: string) => {
+      const lower = (text || '').toLowerCase();
+      return VIDEO_KEYWORDS.some(k => lower.includes(k));
+    };
+    const verifySimilarYesNo = async (query: string, ytTitle: string): Promise<boolean> => {
+      if (!OPENROUTER_PROXY) return false;
+      const payload = `Respond strictly with yes or no whether these two titles are similar or not.\nTitle1: ${query}\nTitle2: ${ytTitle}`;
+      const res = await fetch(OPENROUTER_PROXY, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: payload
+      });
+      if (!res.ok) return false;
+      let value = '';
+      try {
+        const j = await res.json();
+        value = String(j?.json ?? '');
+      } catch {
+        value = await res.text();
+      }
+      const norm = value.replace(/<[^>]*>/g, '').trim().toLowerCase();
+      return norm === 'yes';
+    };
+    const newsWithImages = await Promise.all(newsItems.map(async (item) => {
+      const image_url = await fetchPersonImage(item.person_name);
+      let youtube_url = '';
+      if (shouldAttachVideo(item.news_text)) {
+        const yt = await ytSearch(item.search_query || `${item.person_name} ${item.news_text}`);
+        if (yt) {
+          const isSim = await verifySimilarYesNo(item.search_query || `${item.person_name} ${item.news_text}`, yt.title);
+          if (isSim) {
+            youtube_url = yt.url;
+          }
+        }
+      }
+      return {
+        ...item,
+        image_url,
+        youtube_url,
+        created_at: new Date().toISOString()
+      };
+    }));
     const tableName = `${category}_news`;
     const { data, deleteError } = await supabase.from(tableName).delete().lt('created_at', new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString());
     if (deleteError) {
       console.error(`Error clearing old news for ${category}:`, deleteError);
     }
-    const { error: insertError } = await supabase.from(tableName).insert(newsWithImages);
+    // Try insert with youtube_url; if schema lacks column, fall back to insertion without youtube_url
+    let insertError: any = null;
+    {
+      const { error } = await supabase.from(tableName).insert(newsWithImages);
+      insertError = error || null;
+    }
+    if (insertError && typeof insertError.message === 'string' && /column.*youtube_url.*does not exist/i.test(insertError.message)) {
+      console.warn(`youtube_url column missing in ${tableName}, inserting without it`);
+      const fallback = newsWithImages.map(({ youtube_url, ...rest }) => rest);
+      const { error: fbError } = await supabase.from(tableName).insert(fallback);
+      if (fbError) insertError = fbError;
+      else insertError = null;
+    }
     if (insertError) {
       // Detect Postgres unique constraint violation (SQLSTATE '23505').
       // Supabase JS error objects typically include 'code' or 'details' fields.
