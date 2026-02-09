@@ -99,10 +99,18 @@ function NewsDetail({ category, newsId, personName, newsTitle, youtubeUrl, onBac
 
                 if (data.done) {
                   try {
-                    await client
-                      .from(tableName)
-                      .update({ news_body: full })
-                      .eq('id', newsId);
+                    const fnUrl = `${supabaseUrl}/functions/v1/update-news-body`;
+                    const r = await fetch(fnUrl, {
+                      method: 'POST',
+                      headers: {
+                        Authorization: `Bearer ${anonKey}`,
+                        'Content-Type': 'application/json'
+                      },
+                      body: JSON.stringify({ table: tableName, id: newsId, news_body: full })
+                    });
+                    if (!r.ok) {
+                      console.warn('Failed to persist news_body via function', r.status, r.statusText);
+                    }
                   } catch {}
                   setLoading(false);
                   break;
