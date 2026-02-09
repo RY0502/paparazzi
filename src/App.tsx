@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Loader2, Sparkles, Star, FileText, Bell } from 'lucide-react';
+import { Loader2, Sparkles, Star, FileText, Bell, X } from 'lucide-react';
 import NewsCard from './components/NewsCard';
 import TabButton from './components/TabButton';
 import NewsDetail from './pages/NewsDetail';
@@ -32,6 +32,7 @@ function App() {
   const [notifsEnabled, setNotifsEnabled] = useState(false);
   const [notifBusy, setNotifBusy] = useState(false);
   const [notifMsg, setNotifMsg] = useState<string | null>(null);
+  const [showIosBanner, setShowIosBanner] = useState(false);
 
   useEffect(() => {
     if (!selectedNews) {
@@ -54,6 +55,16 @@ function App() {
       const enabled = await isNotificationsEnabled();
       setNotifsEnabled(enabled);
     })();
+  }, []);
+
+  useEffect(() => {
+    const ua = typeof navigator !== 'undefined' ? navigator.userAgent || '' : '';
+    const isIOS = /iphone|ipad|ipod/i.test(ua);
+    const standalone = (typeof window !== 'undefined' &&
+      ((window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
+      ((navigator as any).standalone === true)));
+    const hidden = typeof window !== 'undefined' ? localStorage.getItem('hideIosBanner') === '1' : false;
+    setShowIosBanner(isIOS && !standalone && !hidden);
   }, []);
 
   const loadNews = async (category: Category) => {
@@ -108,6 +119,7 @@ function App() {
     );
   }
 
+  const ptClass = showIosBanner ? 'pt-36' : 'pt-28';
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
       <div className="fixed top-0 left-0 right-0 z-10 bg-slate-950/30 backdrop-blur-2xl border-b border-white/10">
@@ -168,7 +180,29 @@ function App() {
         </div>
       </div>
 
-      <main className="pt-28 pb-16 px-4 sm:px-6 lg:px-8">
+      {showIosBanner && (
+        <div className="fixed left-0 right-0 z-20 top-16 sm:top-20">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center justify-between gap-3 bg-amber-500/20 border border-amber-400/40 backdrop-blur-md rounded-xl px-3 py-2">
+              <p className="text-amber-300 text-xs sm:text-sm font-semibold">
+                On iPhone, Install to Home Screen to enable notifications. Open in Safari → Share → Add to Home Screen.
+              </p>
+              <button
+                className="p-1 rounded hover:bg-amber-500/20 text-amber-200"
+                aria-label="Close"
+                onClick={() => {
+                  localStorage.setItem('hideIosBanner', '1');
+                  setShowIosBanner(false);
+                }}
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <main className={`${ptClass} pb-16 px-4 sm:px-6 lg:px-8`}>
         <div className="max-w-4xl mx-auto">
           <div className="mb-8 text-center">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/5 backdrop-blur-md rounded-full mb-4 border border-white/10">
