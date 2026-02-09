@@ -4,7 +4,7 @@ import type { NewsItem } from '../types';
 
 interface NewsCardProps {
   item: NewsItem;
-  onClick: (personName: string, newsTitle: string) => void;
+  onClick: (id: string, personName: string, newsTitle: string, youtubeUrl?: string) => void;
 }
 
 function NewsCard({ item, onClick }: NewsCardProps) {
@@ -22,7 +22,7 @@ function NewsCard({ item, onClick }: NewsCardProps) {
 
   return (
     <article
-      onClick={() => onClick(item.person_name, item.news_text)}
+      onClick={() => onClick(item.id, item.person_name, item.news_text, item.youtube_url)}
       className="group relative bg-white/5 backdrop-blur-xl rounded-2xl overflow-hidden border border-white/10 hover:border-rose-500/30 hover:bg-white/10 transition-all duration-300 cursor-pointer hover:shadow-2xl hover:shadow-rose-500/20 hover:-translate-y-1"
     >
       <div className="flex flex-col sm:flex-row">

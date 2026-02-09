@@ -1,72 +1,29 @@
 import { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, Loader2, Sparkles, Clock } from 'lucide-react';
 import TabButton from '../components/TabButton';
+import { createClient } from '@supabase/supabase-js';
 import type { Category } from '../types';
 
 interface NewsDetailProps {
   category: Category;
+  newsId: string;
   personName: string;
   newsTitle: string;
+  youtubeUrl?: string;
   onBack: () => void;
   onNavigateToCategory: (category: Category) => void;
 }
 
-function NewsDetail({ category, personName, newsTitle, onBack, onNavigateToCategory }: NewsDetailProps) {
+function NewsDetail({ category, newsId, personName, newsTitle, youtubeUrl, onBack, onNavigateToCategory }: NewsDetailProps) {
   const [content, setContent] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [videoId, setVideoId] = useState<string | null>(null);
-  const [videoError, setVideoError] = useState<string | null>(null);
-  const [videoLoading, setVideoLoading] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
-
-  const keywords = ['shows', 'shares', 'video', 'videos', 'clip', 'clips', 'reels', 'tape', 'captured', 'caught', 'camera', 'tik tok', 'tik-tok', 'footage', 'reel', 'videotape'];
-
-  const titleContainsVideoKeyword = keywords.some(keyword =>
-    newsTitle.toLowerCase().includes(keyword)
-  );
+  const [dbYoutubeUrl, setDbYoutubeUrl] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
-
-  useEffect(() => {
-    if (titleContainsVideoKeyword) {
-      fetchYoutubeVideo();
-    }
-  }, [newsTitle, titleContainsVideoKeyword]);
-
-  const fetchYoutubeVideo = async () => {
-    try {
-      setVideoLoading(true);
-      setVideoError(null);
-      setVideoId(null);
-
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-      const response = await fetch(`${supabaseUrl}/functions/v1/youtube-search-first`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${anonKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ q: newsTitle }),
-      });
-
-      const data = await response.json();
-
-      if (response.status === 200 && data.videoId) {
-        setVideoId(data.videoId);
-      } else if (response.status === 400 || response.status === 500) {
-        setVideoError(data.error?.message || 'Unable to fetch video');
-      }
-    } catch {
-      setVideoError('Failed to fetch video');
-    } finally {
-      setVideoLoading(false);
-    }
-  };
 
   useEffect(() => {
     const fetchStreamingContent = async () => {
@@ -75,14 +32,35 @@ function NewsDetail({ category, personName, newsTitle, onBack, onNavigateToCateg
       setContent('');
 
       try {
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+        const client = supabaseUrl && anonKey ? createClient(supabaseUrl, anonKey) : null;
+        if (!client) {
+          throw new Error('Supabase not configured');
+        }
+        const tableName = `${category}_news`;
+        const { data: row, error: selErr } = await client
+          .from(tableName)
+          .select('id,youtube_url,news_body')
+          .eq('id', newsId)
+          .limit(1)
+          .maybeSingle();
+        if (selErr) {
+          console.warn('Failed to read news body', selErr);
+        }
+        if (row?.youtube_url) {
+          setDbYoutubeUrl(row.youtube_url as string);
+        }
+        if (row?.news_body && String(row.news_body).trim().length > 0) {
+          setContent(String(row.news_body));
+          setLoading(false);
+          return;
+        }
         const params = new URLSearchParams({
           category,
           personName,
           newsTitle,
         });
-
-        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-        const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
         const url = `${supabaseUrl}/functions/v1/stream-news-content?${params.toString()}`;
 
@@ -103,6 +81,7 @@ function NewsDetail({ category, personName, newsTitle, onBack, onNavigateToCateg
 
         const decoder = new TextDecoder();
         let buffer = '';
+        let full = '';
 
         while (true) {
           const { done, value } = await reader.read();
@@ -119,6 +98,12 @@ function NewsDetail({ category, personName, newsTitle, onBack, onNavigateToCateg
                 const data = JSON.parse(jsonStr);
 
                 if (data.done) {
+                  try {
+                    await client
+                      .from(tableName)
+                      .update({ news_body: full })
+                      .eq('id', newsId);
+                  } catch {}
                   setLoading(false);
                   break;
                 }
@@ -128,6 +113,7 @@ function NewsDetail({ category, personName, newsTitle, onBack, onNavigateToCateg
                 }
 
                 if (data.text) {
+                  full += data.text;
                   setContent((prev) => prev + data.text);
                 }
               } catch {
@@ -148,7 +134,7 @@ function NewsDetail({ category, personName, newsTitle, onBack, onNavigateToCateg
     };
 
     fetchStreamingContent();
-  }, [category, personName, newsTitle]);
+  }, [category, newsId, personName, newsTitle]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex flex-col">
@@ -237,33 +223,18 @@ function NewsDetail({ category, personName, newsTitle, onBack, onNavigateToCateg
             </div>
           ) : (
             <div className="space-y-8">
-              {videoId && (
+              {(dbYoutubeUrl || youtubeUrl) && (
                 <div className="w-full">
                   <div className="relative w-full bg-black rounded-2xl overflow-hidden border border-white/10">
                     <div className="relative w-full pt-[56.25%]">
                       <iframe
                         className="absolute top-0 left-0 w-full h-full"
-                        src={`https://www.youtube.com/embed/${videoId}`}
+                        src={(dbYoutubeUrl || youtubeUrl || '').replace('watch?v=', 'embed/')}
                         title="News Video"
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                         allowFullScreen
                       ></iframe>
                     </div>
-                  </div>
-                </div>
-              )}
-
-              {videoError && (
-                <div className="w-full bg-amber-500/10 backdrop-blur-lg border border-amber-500/20 rounded-2xl p-6 text-center">
-                  <p className="text-amber-300 font-medium text-sm">{videoError}</p>
-                </div>
-              )}
-
-              {videoLoading && !videoId && (
-                <div className="w-full bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 p-8 flex items-center justify-center min-h-[300px]">
-                  <div className="text-center">
-                    <Loader2 className="w-8 h-8 text-rose-500 animate-spin mx-auto mb-4" />
-                    <p className="text-slate-400">Loading video...</p>
                   </div>
                 </div>
               )}

@@ -129,6 +129,7 @@ function getMockNews(category: Category): NewsItem[] {
         image_url: 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=800',
         created_at: new Date().toISOString(),
         search_query: 'Shah Rukh Khan new project announcement',
+        youtube_url: '',
       },
       {
         id: '2',
@@ -137,6 +138,7 @@ function getMockNews(category: Category): NewsItem[] {
         image_url: 'https://images.pexels.com/photos/733872/pexels-photo-733872.jpeg?auto=compress&cs=tinysrgb&w=800',
         created_at: new Date().toISOString(),
         search_query: 'Deepika Padukone Best Actress award',
+        youtube_url: '',
       },
       {
         id: '3',
@@ -145,6 +147,7 @@ function getMockNews(category: Category): NewsItem[] {
         image_url: 'https://images.pexels.com/photos/1516680/pexels-photo-1516680.jpeg?auto=compress&cs=tinysrgb&w=800',
         created_at: new Date().toISOString(),
         search_query: 'Ranveer Singh fashion collaboration',
+        youtube_url: '',
       },
     ],
     tv: [
@@ -155,6 +158,7 @@ function getMockNews(category: Category): NewsItem[] {
         image_url: 'https://images.pexels.com/photos/1181686/pexels-photo-1181686.jpeg?auto=compress&cs=tinysrgb&w=800',
         created_at: new Date().toISOString(),
         search_query: 'Hina Khan new daily soap',
+        youtube_url: '',
       },
       {
         id: '5',
@@ -163,6 +167,7 @@ function getMockNews(category: Category): NewsItem[] {
         image_url: 'https://images.pexels.com/photos/1222271/pexels-photo-1222271.jpeg?auto=compress&cs=tinysrgb&w=800',
         created_at: new Date().toISOString(),
         search_query: 'Karan Johar reality show interview',
+        youtube_url: '',
       },
       {
         id: '6',
@@ -171,6 +176,7 @@ function getMockNews(category: Category): NewsItem[] {
         image_url: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=800',
         created_at: new Date().toISOString(),
         search_query: 'Rupali Ganguly TV series finale',
+        youtube_url: '',
       },
     ],
     hollywood: [
@@ -181,6 +187,7 @@ function getMockNews(category: Category): NewsItem[] {
         image_url: 'https://images.pexels.com/photos/1438081/pexels-photo-1438081.jpeg?auto=compress&cs=tinysrgb&w=800',
         created_at: new Date().toISOString(),
         search_query: 'Leonardo DiCaprio retirement directing',
+        youtube_url: '',
       },
       {
         id: '8',
@@ -189,6 +196,7 @@ function getMockNews(category: Category): NewsItem[] {
         image_url: 'https://images.pexels.com/photos/1065084/pexels-photo-1065084.jpeg?auto=compress&cs=tinysrgb&w=800',
         created_at: new Date().toISOString(),
         search_query: 'Emma Stone production company',
+        youtube_url: '',
       },
       {
         id: '9',
@@ -197,9 +205,11 @@ function getMockNews(category: Category): NewsItem[] {
         image_url: 'https://images.pexels.com/photos/1587009/pexels-photo-1587009.jpeg?auto=compress&cs=tinysrgb&w=800',
         created_at: new Date().toISOString(),
         search_query: 'Taylor Swift surprise album release',
+        youtube_url: '',
       },
     ],
   };
 
   return mockData[category] || [];
 }
+

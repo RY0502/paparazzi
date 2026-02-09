@@ -7,6 +7,8 @@ export interface NewsItem {
   image_url: string;
   created_at: string;
   search_query: string;
+  youtube_url?: string;
+  news_body?: string;
 }
 
 export interface CachedNews {

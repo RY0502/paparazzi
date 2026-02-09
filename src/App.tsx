@@ -21,8 +21,10 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedNews, setSelectedNews] = useState<{
+    id: string;
     personName: string;
     newsTitle: string;
+    youtubeUrl?: string;
   } | null>(null);
   const [scrollPosition, setScrollPosition] = useState(0);
   const [viewingNewsletter, setViewingNewsletter] = useState(false);
@@ -58,9 +60,9 @@ function App() {
     }
   };
 
-  const handleNewsClick = (personName: string, newsTitle: string) => {
+  const handleNewsClick = (id: string, personName: string, newsTitle: string, youtubeUrl?: string) => {
     setScrollPosition(window.scrollY);
-    setSelectedNews({ personName, newsTitle });
+    setSelectedNews({ id, personName, newsTitle, youtubeUrl });
   };
 
   const handleBackFromDetail = () => {
@@ -85,8 +87,10 @@ function App() {
     return (
       <NewsDetail
         category={activeTab}
+        newsId={selectedNews.id}
         personName={selectedNews.personName}
         newsTitle={selectedNews.newsTitle}
+        youtubeUrl={selectedNews.youtubeUrl}
         onBack={handleBackFromDetail}
         onNavigateToCategory={handleNavigateToCategory}
       />
