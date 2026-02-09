@@ -34,6 +34,14 @@ export async function enableNotifications(): Promise<{ success: boolean; message
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
       return { success: false, message: 'Browser does not support notifications' };
     }
+    const ua = navigator.userAgent || '';
+    const isIOS = /iphone|ipad|ipod/i.test(ua);
+    const isStandalone =
+      (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
+      ((navigator as any).standalone === true);
+    if (isIOS && !isStandalone) {
+      return { success: false, message: 'On iPhone, install to Home Screen to enable push' };
+    }
     if (!supabaseUrl || !supabaseAnonKey) {
       return { success: false, message: 'Supabase is not configured' };
     }
@@ -73,8 +81,8 @@ export async function enableNotifications(): Promise<{ success: boolean; message
     }
 
     return { success: true };
-  } catch (err: any) {
-    return { success: false, message: err?.message || 'Unknown error' };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    return { success: false, message };
   }
 }
-

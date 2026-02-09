@@ -31,6 +31,7 @@ function App() {
   const [viewingNewsletter, setViewingNewsletter] = useState(false);
   const [notifsEnabled, setNotifsEnabled] = useState(false);
   const [notifBusy, setNotifBusy] = useState(false);
+  const [notifMsg, setNotifMsg] = useState<string | null>(null);
 
   useEffect(() => {
     if (!selectedNews) {
@@ -240,6 +241,7 @@ function App() {
                 const res = await enableNotifications();
                 setNotifBusy(false);
                 setNotifsEnabled(!!res.success);
+                setNotifMsg(res.message || (res.success ? 'Notifications enabled' : 'Unable to enable notifications'));
               }}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-300 ${
                 notifsEnabled
@@ -252,6 +254,11 @@ function App() {
               {notifBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Bell className="w-4 h-4" />}
               {notifsEnabled ? 'Notifications Enabled' : 'Enable Notifications'}
             </button>
+            {notifMsg && (
+              <p className="text-amber-400 text-xs">
+                {notifMsg}
+              </p>
+            )}
             <p className="text-slate-500 text-sm">
               © 2025 RYaxn. All rights reserved.
             </p>
