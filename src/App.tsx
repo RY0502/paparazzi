@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Loader2, Sparkles, Star, FileText } from 'lucide-react';
+import { Loader2, Sparkles, Star, FileText, Bell } from 'lucide-react';
 import NewsCard from './components/NewsCard';
 import TabButton from './components/TabButton';
 import NewsDetail from './pages/NewsDetail';
 import NewsletterPage from './pages/NewsletterPage';
 import { fetchNews } from './services/newsService';
 import type { NewsItem, Category } from './types';
+import { enableNotifications, isNotificationsEnabled } from './services/pushService';
 
 function App() {
   const [activeTab, setActiveTab] = useState<Category>(() => {
@@ -28,6 +29,8 @@ function App() {
   } | null>(null);
   const [scrollPosition, setScrollPosition] = useState(0);
   const [viewingNewsletter, setViewingNewsletter] = useState(false);
+  const [notifsEnabled, setNotifsEnabled] = useState(false);
+  const [notifBusy, setNotifBusy] = useState(false);
 
   useEffect(() => {
     if (!selectedNews) {
@@ -44,6 +47,13 @@ function App() {
       localStorage.setItem('activeCategory', activeTab);
     }
   }, [activeTab]);
+
+  useEffect(() => {
+    (async () => {
+      const enabled = await isNotificationsEnabled();
+      setNotifsEnabled(enabled);
+    })();
+  }, []);
 
   const loadNews = async (category: Category) => {
     setLoading(true);
@@ -222,6 +232,25 @@ function App() {
             >
               <FileText className="w-4 h-4" />
               Newsletter
+            </button>
+            <button
+              onClick={async () => {
+                if (notifsEnabled || notifBusy) return;
+                setNotifBusy(true);
+                const res = await enableNotifications();
+                setNotifBusy(false);
+                setNotifsEnabled(!!res.success);
+              }}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-300 ${
+                notifsEnabled
+                  ? 'bg-green-600 text-white'
+                  : 'bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:shadow-lg hover:shadow-amber-500/40'
+              }`}
+              disabled={notifsEnabled || notifBusy}
+              title={notifsEnabled ? 'Notifications enabled' : 'Enable push notifications'}
+            >
+              {notifBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Bell className="w-4 h-4" />}
+              {notifsEnabled ? 'Notifications Enabled' : 'Enable Notifications'}
             </button>
             <p className="text-slate-500 text-sm">
               © 2025 RYaxn. All rights reserved.
