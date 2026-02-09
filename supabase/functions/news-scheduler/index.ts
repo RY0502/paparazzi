@@ -453,7 +453,7 @@ async function updateNewsForCategory(supabase: any, category: string) {
     console.log(`Fetching news for ${category}...`);
     const newsItems = await fetchFromGemini(category);
     console.log(`Fetched ${newsItems.length} news items for ${category}`);
-    const VIDEO_KEYWORDS = ['shows','shares','shared','video','videos','clip','clips','reels','tape','captured','caught','camera','tik tok','tik-tok','footage','reel','videotape','instagram', 'insta'];
+    const VIDEO_KEYWORDS = ['shows','shares','shared','video','videos','clip','clips','reels','tape','captured','caught','camera','tik tok','tik-tok','footage','reel','videotape','instagram', 'insta','announced','revealed'];
     const YT_API_KEY = Deno.env.get('YOUTUBE_API_KEY') || '';
     const OPENROUTER_PROXY = Deno.env.get('OPENROUTER_PROXY') || '';
     const ytSearch = async (q: string): Promise<{ url: string; title: string } | null> => {
