@@ -42,6 +42,10 @@ const inMemoryCache: Record<Category, { data: NewsItem[]; timestamp: number } | 
   hollywood: null,
 };
 
+function delay(ms: number) {
+  return new Promise<void>((resolve) => setTimeout(resolve, ms));
+}
+
 export async function fetchNews(category: Category): Promise<NewsItem[]> {
   const now = Date.now();
   const cached = inMemoryCache[category];
@@ -63,47 +67,54 @@ export async function fetchNews(category: Category): Promise<NewsItem[]> {
 
   try {
     const tableName = `${category}_news`;
-
-    const { data, error } = await client
-      .from(tableName)
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(15);
-
-    if (error) {
-      console.error(`Error fetching ${category} news:`, error);
-      const mockData = getMockNews(category);
-      inMemoryCache[category] = {
-        data: mockData,
-        timestamp: now,
-      };
-      return mockData;
+    const maxAttempts = 2;
+    const baseDelayMs = 500;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        const { data, error } = await client
+          .from(tableName)
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(15);
+        if (error) {
+          if (attempt < maxAttempts) {
+            const wait = Math.max(0, baseDelayMs * Math.pow(2, attempt - 1) + (Math.random() * baseDelayMs * 0.6 - baseDelayMs * 0.3));
+            await delay(wait);
+            continue;
+          }
+          const mockData = getMockNews(category);
+          return mockData;
+        }
+        const newsItems = data || [];
+        if (newsItems.length === 0) {
+          if (attempt < maxAttempts) {
+            const wait = Math.max(0, baseDelayMs * Math.pow(2, attempt - 1) + (Math.random() * baseDelayMs * 0.6 - baseDelayMs * 0.3));
+            await delay(wait);
+            continue;
+          }
+          const mockData = getMockNews(category);
+          return mockData;
+        }
+        inMemoryCache[category] = {
+          data: newsItems,
+          timestamp: now,
+        };
+        return newsItems;
+      } catch (e) {
+        if (attempt < maxAttempts) {
+          const wait = Math.max(0, baseDelayMs * Math.pow(2, attempt - 1) + (Math.random() * baseDelayMs * 0.6 - baseDelayMs * 0.3));
+          await delay(wait);
+          continue;
+        }
+        const mockData = getMockNews(category);
+        return mockData;
+      }
     }
-
-    const newsItems = data || [];
-
-    if (newsItems.length === 0) {
-      const mockData = getMockNews(category);
-      inMemoryCache[category] = {
-        data: mockData,
-        timestamp: now,
-      };
-      return mockData;
-    }
-
-    inMemoryCache[category] = {
-      data: newsItems,
-      timestamp: now,
-    };
-
-    return newsItems;
+    const mockData = getMockNews(category);
+    return mockData;
   } catch (err) {
     console.error(`Failed to fetch ${category} news:`, err);
     const mockData = getMockNews(category);
-    inMemoryCache[category] = {
-      data: mockData,
-      timestamp: now,
-    };
     return mockData;
   }
 }

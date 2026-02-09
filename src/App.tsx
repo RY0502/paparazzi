@@ -8,7 +8,15 @@ import { fetchNews } from './services/newsService';
 import type { NewsItem, Category } from './types';
 
 function App() {
-  const [activeTab, setActiveTab] = useState<Category>('bollywood');
+  const [activeTab, setActiveTab] = useState<Category>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('activeCategory');
+      if (stored === 'bollywood' || stored === 'tv' || stored === 'hollywood') {
+        return stored as Category;
+      }
+    }
+    return 'bollywood';
+  });
   const [news, setNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -27,6 +35,12 @@ function App() {
 
   useEffect(() => {
     loadNews(activeTab);
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('activeCategory', activeTab);
+    }
   }, [activeTab]);
 
   const loadNews = async (category: Category) => {
@@ -84,7 +98,16 @@ function App() {
       <div className="fixed top-0 left-0 right-0 z-10 bg-slate-950/30 backdrop-blur-2xl border-b border-white/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center h-16 sm:h-20 gap-2 sm:gap-6">
-            <div className="flex items-center gap-3 group cursor-pointer">
+            <div
+              className="flex items-center gap-3 group cursor-pointer"
+              onClick={() => {
+                setSelectedNews(null);
+                setViewingNewsletter(false);
+                setActiveTab('bollywood');
+                setScrollPosition(0);
+                window.scrollTo(0, 0);
+              }}
+            >
               <div className="relative">
                 <div className="absolute inset-0 bg-gradient-to-r from-rose-500 to-pink-500 rounded-xl blur-xl opacity-60 group-hover:opacity-100 transition-opacity animate-glow"></div>
                 <div className="relative bg-gradient-to-r from-rose-500 to-pink-500 p-2 rounded-xl">
@@ -102,7 +125,7 @@ function App() {
             <nav className="flex justify-center gap-1 sm:gap-2">
               <TabButton
                 active={activeTab === 'bollywood'}
-                onClick={() => setActiveTab('bollywood')}
+                onClick={() => handleNavigateToCategory('bollywood')}
                 label={
                   <>
                     <span className="sm:hidden">B'wood</span>
@@ -112,12 +135,12 @@ function App() {
               />
               <TabButton
                 active={activeTab === 'tv'}
-                onClick={() => setActiveTab('tv')}
+                onClick={() => handleNavigateToCategory('tv')}
                 label="TV"
               />
               <TabButton
                 active={activeTab === 'hollywood'}
-                onClick={() => setActiveTab('hollywood')}
+                onClick={() => handleNavigateToCategory('hollywood')}
                 label={
                   <>
                     <span className="sm:hidden">H'wood</span>
