@@ -20,6 +20,7 @@ function NewsDetail({ category, newsId, personName, newsTitle, youtubeUrl, onBac
   const [error, setError] = useState<string | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const [dbYoutubeUrl, setDbYoutubeUrl] = useState<string | undefined>(undefined);
+  const [forceStream, setForceStream] = useState(false);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -51,7 +52,7 @@ function NewsDetail({ category, newsId, personName, newsTitle, youtubeUrl, onBac
         if (row?.youtube_url) {
           setDbYoutubeUrl(row.youtube_url as string);
         }
-        if (row?.news_body && String(row.news_body).trim().length > 0) {
+        if (!forceStream && row?.news_body && String(row.news_body).trim().length > 0) {
           setContent(String(row.news_body));
           setLoading(false);
           return;
@@ -113,6 +114,7 @@ function NewsDetail({ category, newsId, personName, newsTitle, youtubeUrl, onBac
                     }
                   } catch {}
                   setLoading(false);
+                  setForceStream(false);
                   break;
                 }
 
@@ -142,7 +144,7 @@ function NewsDetail({ category, newsId, personName, newsTitle, youtubeUrl, onBac
     };
 
     fetchStreamingContent();
-  }, [category, newsId, personName, newsTitle]);
+  }, [category, newsId, personName, newsTitle, forceStream]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex flex-col">
@@ -261,6 +263,22 @@ function NewsDetail({ category, newsId, personName, newsTitle, youtubeUrl, onBac
                       )
                     ))}
                   </div>
+                  {!loading && content.trim().split(/\s+/).filter(Boolean).length < 100 && (
+                    <div className="mt-4 text-right">
+                      <button
+                        className="text-slate-300 hover:text-white underline underline-offset-4"
+                        onClick={() => {
+                          if (loading) return;
+                          setError(null);
+                          setContent('');
+                          setForceStream(true);
+                          setLoading(true);
+                        }}
+                      >
+                        read more...
+                      </button>
+                    </div>
+                  )}
                   {loading && (
                     <div className="mt-8 flex items-center gap-3">
                       <div className="w-2 h-2 bg-rose-500 rounded-full animate-pulse"></div>

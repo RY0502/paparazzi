@@ -32,7 +32,8 @@ function App() {
   const [notifsEnabled, setNotifsEnabled] = useState(false);
   const [notifBusy, setNotifBusy] = useState(false);
   const [notifMsg, setNotifMsg] = useState<string | null>(null);
-  const [showIosBanner, setShowIosBanner] = useState(false);
+  const [iosInlineBanner, setIosInlineBanner] = useState(false);
+  const [iosStickyHint, setIosStickyHint] = useState(false);
 
   useEffect(() => {
     if (!selectedNews) {
@@ -57,38 +58,7 @@ function App() {
     })();
   }, []);
 
-  useEffect(() => {
-    (async () => {
-      if (typeof window === 'undefined') return;
-      if (notifsEnabled) return;
-      const autoDone = localStorage.getItem('notifAutoPromptDone') === '1';
-      if (autoDone) return;
-      const ua = navigator.userAgent || '';
-      const isIOS = /iphone|ipad|ipod/i.test(ua);
-      const standalone =
-        ((window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
-        ((navigator as any).standalone === true));
-      if (isIOS && !standalone) return;
-      if (Notification.permission === 'granted') return;
-      if (Notification.permission === 'denied') return;
-      const res = await enableNotifications();
-      if (res.success) {
-        setNotifsEnabled(true);
-        localStorage.setItem('notifEnabled', '1');
-      }
-      localStorage.setItem('notifAutoPromptDone', '1');
-    })();
-  }, [notifsEnabled]);
-
-  useEffect(() => {
-    const ua = typeof navigator !== 'undefined' ? navigator.userAgent || '' : '';
-    const isIOS = /iphone|ipad|ipod/i.test(ua);
-    const standalone = (typeof window !== 'undefined' &&
-      ((window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
-      ((navigator as any).standalone === true)));
-    const hidden = typeof window !== 'undefined' ? localStorage.getItem('hideIosBanner') === '1' : false;
-    setShowIosBanner(isIOS && !standalone && !hidden);
-  }, []);
+  // Remove auto-prompt and persistent banner behavior; show iOS hint only on button click
 
   const loadNews = async (category: Category) => {
     setLoading(true);
@@ -115,9 +85,7 @@ function App() {
   };
 
   const handleNavigateToCategory = (category: Category) => {
-    if (category !== activeTab) {
-      setScrollPosition(0);
-    }
+    setScrollPosition(0);
     setActiveTab(category);
     setSelectedNews(null);
   };
@@ -142,7 +110,7 @@ function App() {
     );
   }
 
-  const ptClass = showIosBanner ? 'pt-36' : 'pt-28';
+  const ptClass = 'pt-28';
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
       <div className="fixed top-0 left-0 right-0 z-10 bg-slate-950/30 backdrop-blur-2xl border-b border-white/10">
@@ -203,27 +171,7 @@ function App() {
         </div>
       </div>
 
-      {showIosBanner && (
-        <div className="fixed left-0 right-0 z-20 top-16 sm:top-20">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center justify-between gap-3 bg-amber-500/20 border border-amber-400/40 backdrop-blur-md rounded-xl px-3 py-2">
-              <p className="text-amber-300 text-xs sm:text-sm font-semibold">
-                On iPhone, Install to Home Screen to enable notifications. Open in Safari → Share → Add to Home Screen.
-              </p>
-              <button
-                className="p-1 rounded hover:bg-amber-500/20 text-amber-200"
-                aria-label="Close"
-                onClick={() => {
-                  localStorage.setItem('hideIosBanner', '1');
-                  setShowIosBanner(false);
-                }}
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Removed global iOS banner */}
 
       <main className={`${ptClass} pb-16 px-4 sm:px-6 lg:px-8`}>
         <div className="max-w-4xl mx-auto">
@@ -294,6 +242,16 @@ function App() {
             <button
               onClick={async () => {
                 if (notifsEnabled || notifBusy) return;
+                const ua = navigator.userAgent || '';
+                const isIOS = /iphone|ipad|ipod/i.test(ua);
+                const standalone =
+                  ((window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
+                  ((navigator as any).standalone === true));
+                if (isIOS && !standalone) {
+                  setIosInlineBanner(true);
+                  setIosStickyHint(false);
+                  return;
+                }
                 setNotifBusy(true);
                 const res = await enableNotifications();
                 setNotifBusy(false);
@@ -311,9 +269,31 @@ function App() {
               {notifBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Bell className="w-4 h-4" />}
               {notifsEnabled ? 'Notifications Enabled' : 'Enable Notifications'}
             </button>
+            {iosInlineBanner && !notifsEnabled && (
+              <div className="flex items-center justify-between gap-3 bg-amber-500/20 border border-amber-400/40 backdrop-blur-md rounded-xl px-3 py-2">
+                <p className="text-amber-300 text-xs sm:text-sm font-semibold">
+                  On iPhone, Install to Home Screen to enable notifications. Open in Safari → Share → Add to Home Screen.
+                </p>
+                <button
+                  className="p-1 rounded hover:bg-amber-500/20 text-amber-200"
+                  aria-label="Close"
+                  onClick={() => {
+                    setIosInlineBanner(false);
+                    setIosStickyHint(true);
+                  }}
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
             {notifMsg && (
               <p className="text-amber-400 text-xs">
                 {notifMsg}
+              </p>
+            )}
+            {iosStickyHint && !notifsEnabled && (
+              <p className="text-amber-300 text-xs font-semibold">
+                On iPhone, Install to Home Screen to enable notifications. Open in Safari → Share → Add to Home Screen.
               </p>
             )}
             <p className="text-slate-500 text-sm">
