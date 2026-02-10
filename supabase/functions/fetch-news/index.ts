@@ -93,66 +93,54 @@ async function fetchGeminiKeyFromUrl(envUrlVar: string) {
 async function fetchFromGeminiWithKey(category: string, geminiApiKey: string) {
   const prompts: Record<string, string> = {
     bollywood: `Using ONLY real-time web results get exactly 15 latest entertainment news items about Indian Bollywood actors and singers trending from the past 24 hours. Each news item must be on a separate line in this exact format:
-[Person Name] - [Single line news description] || [120-150 word short summary without citations]
+[Person Name] - [Single line news description] || [80-100 word details of the news without citations]
 
 Example:
-Shah Rukh Khan - Announces new collaboration with international director || A concise paragraph of 120-150 words summarizing the context, who/what/why/impact.
-Deepika Padukone - Wins Best Actress award at film festival || A concise paragraph of 120-150 words summarizing the context, who/what/why/impact.
+Shah Rukh Khan - Announces new collaboration with international director || A paragraph of 80-100 words about the news context, who/what/why/impact.
+Deepika Padukone - Wins Best Actress award at film festival || A paragraph of 80-100 words about the news context, who/what/why/impact.
 
 Requirements:
 - Use real, well-known Bollywood celebrities
 - Keep each news item to one line
 - Make news current and tabloid worthy
-- Constraint: Grammatical Completeness. The description must be a complete independent clause. It must contain a subject, a functional verb, and an object or context.
-Reject: Fragmented keyword pairs (e.g., "Javed Akhtar - threaten" or "Stock market - rise").
-Accept: Full narrative summaries (e.g., "Javed Akhtar receives a threatening email regarding his recent comments" or "The stock market rose by 2% following the federal announcement").
-Standard of Quality: > If the line were read in isolation, a reader should understand exactly who did what and why, without needing to refer back to the source text.
 - Return exactly 15 items
-- After the single-line description, add " || " and then a 120-150 word short summary. Do not include sources or citations. Do not include brackets.
+- After the single-line description, add " || " and then a 80-100 word details about the news. Do not include sources or citations. Do not include brackets.Important: Ensure minimum 80 words in deatils about the news
 - Constraint:  Return only 1 when news are similar. E.g.
 Ranveer Singh - Dhurandhar marches towards Rs 750
 and
 Ranveer Singh - his film Dhurandhar marches towards RS 750 crores mark
 should result in single news item and not 2`,
     tv: `Using ONLY real-time web results get exactly 15 latest entertainment news items about Indian daily soap and TV industry actors trending from the past 24 hours. Each news item must be on a separate line in this exact format:
-[Person Name] - [Single line news description] || [120-150 word short summary without citations]
+[Person Name] - [Single line news description] || [80-100 word details of the news without citations]
 
 Example:
-Hina Khan - Returns to popular TV show after break || A concise paragraph of 120-150 words summarizing the context, who/what/why/impact.
-Rupali Ganguly - Show reaches 1000 episode milestone || A concise paragraph of 120-150 words summarizing the context, who/what/why/impact.
+Hina Khan - Returns to popular TV show after break || A paragraph of 80-100 words about the news context, who/what/why/impact.
+Rupali Ganguly - Show reaches 1000 episode milestone || A paragraph of 80-100 words about the news context, who/what/why/impact.
 
 Requirements:
 - Use real, well-known Indian TV actors
 - Keep each news item to one line
 - Make news current and  tabloid worthy
-- Constraint: Grammatical Completeness. The description must be a complete independent clause. It must contain a subject, a functional verb, and an object or context.
-Reject: Fragmented keyword pairs (e.g., "Javed Akhtar - threaten" or "Stock market - rise").
-Accept: Full narrative summaries (e.g., "Javed Akhtar receives a threatening email regarding his recent comments" or "The stock market rose by 2% following the federal announcement").
-Standard of Quality: > If the line were read in isolation, a reader should understand exactly who did what and why, without needing to refer back to the source text.
 - Return exactly 15 items
-- After the single-line description, add " || " and then a 120-150 word short summary. Do not include sources or citations. Do not include brackets.
+- After the single-line description, add " || " and then a 80-100 word details about the news. Do not include sources or citations. Do not include brackets.Important: Ensure minimum 80 words in deatils about the news
 - Constraint: return only 1 when news are similar. E.g.
 Gaurav khanna wins big boss 18
 and
 Gaurav khanna revived his tv career after big boss 18 win
 should result in single news item and not 2`,
     hollywood: `Using ONLY real-time web results get exactly 15 latest entertainment news items about American Hollywood actors and singers trending from the past 24 hours. Each news item must be on a separate line in this exact format:
-[Person Name] - [Single line news description] || [120-150 word short summary without citations]
+[Person Name] - [Single line news description] || [80-100 word details of the news without citations]
 
 Example:
-Leonardo DiCaprio - Signs for climate change documentary || A concise paragraph of 120-150 words summarizing the context, who/what/why/impact.
-Taylor Swift - Announces surprise album release || A concise paragraph of 120-150 words summarizing the context, who/what/why/impact.
+Leonardo DiCaprio - Signs for climate change documentary || A paragraph of 80-100 words about the news context, who/what/why/impact.
+Taylor Swift - Announces surprise album release || A paragraph of 80-100 words about the news context, who/what/why/impact.
 
 Requirements:
 - Use real, well-known Hollywood celebrities
 - Keep each news item to one line
 - Make news current and tabloid worthy
-- Constraint: Grammatical Completeness. The description must be a complete independent clause. It must contain a subject, a functional verb, and an object or context.
-Reject: Fragmented keyword pairs (e.g., "Javed Akhtar - threaten" or "Stock market - rise").
-Accept: Full narrative summaries (e.g., "Javed Akhtar receives a threatening email regarding his recent comments" or "The stock market rose by 2% following the federal announcement").
-Standard of Quality: > If the line were read in isolation, a reader should understand exactly who did what and why, without needing to refer back to the source text.
 - Return exactly 15 items
-- After the single-line description, add " || " and then a 120-150 word short summary. Do not include sources or citations. Do not include brackets.
+- After the single-line description, add " || " and then a 80-100 word details about the news. Do not include sources or citations. Do not include brackets.Important: Ensure minimum 80 words in deatils about the news
 - Constraint:  return only 1 when news are similar. E.g.
 Killing of Rob Reiner and his wife stun hollywood
 and
