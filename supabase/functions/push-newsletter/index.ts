@@ -87,6 +87,7 @@ async function sendToAll(
   }
   const results: { id: string; ok: boolean; error?: string }[] = [];
   const list = (subs || []) as Array<{ id: string; endpoint: string; keys?: { p256dh?: string; auth?: string } }>;
+  console.log(`[push-newsletter] Sending push to ${list.length} subscriptions`);
   for (const s of list) {
     const subscription: { endpoint: string; keys: { p256dh?: string; auth?: string } } = {
       endpoint: s.endpoint,
@@ -98,6 +99,9 @@ async function sendToAll(
         urgency: "high",
       } as webpush.RequestOptions);
       results.push({ id: s.id, ok: true });
+      const ep = String(s.endpoint || "");
+      const epShort = ep.length > 32 ? `${ep.slice(0, 16)}…${ep.slice(-8)}` : ep;
+      console.log(`[push-newsletter] OK id=${s.id} endpoint=${epShort}`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       results.push({ id: s.id, ok: false, error: msg });
@@ -107,8 +111,14 @@ async function sendToAll(
       if (status === 404 || status === 410) {
         await supabase.from("push_subscriptions").delete().eq("id", s.id);
       }
+      const ep = String(s.endpoint || "");
+      const epShort = ep.length > 32 ? `${ep.slice(0, 16)}…${ep.slice(-8)}` : ep;
+      console.warn(`[push-newsletter] FAIL id=${s.id} endpoint=${epShort} status=${status} error=${msg}`);
     }
   }
+  const ok = results.filter(r => r.ok).length;
+  const fail = results.length - ok;
+  console.log(`[push-newsletter] Summary: sent=${ok} failed=${fail}`);
   return results;
 }
 
@@ -137,6 +147,7 @@ Deno.serve(async (req) => {
       publicKey: vapidPublic,
       privateKey: vapidPrivate,
     });
+    console.log(`[push-newsletter] Completed send. ok=${results.filter(r => r.ok).length} failed=${results.filter(r => !r.ok).length}`);
 
     return new Response(JSON.stringify({
       message: "Push notifications sent",

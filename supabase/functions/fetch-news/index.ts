@@ -93,11 +93,11 @@ async function fetchGeminiKeyFromUrl(envUrlVar: string) {
 async function fetchFromGeminiWithKey(category: string, geminiApiKey: string) {
   const prompts: Record<string, string> = {
     bollywood: `Using ONLY real-time web results get exactly 15 latest entertainment news items about Indian Bollywood actors and singers trending from the past 24 hours. Each news item must be on a separate line in this exact format:
-[Person Name] - [Single line news description]
+[Person Name] - [Single line news description] || [80-100 word short summary without citations]
 
 Example:
-Shah Rukh Khan - Announces new collaboration with international director
-Deepika Padukone - Wins Best Actress award at film festival
+Shah Rukh Khan - Announces new collaboration with international director || A concise paragraph of 80-100 words summarizing the context, who/what/why/impact.
+Deepika Padukone - Wins Best Actress award at film festival || A concise paragraph of 80-100 words summarizing the context, who/what/why/impact.
 
 Requirements:
 - Use real, well-known Bollywood celebrities
@@ -108,17 +108,18 @@ Reject: Fragmented keyword pairs (e.g., "Javed Akhtar - threaten" or "Stock mark
 Accept: Full narrative summaries (e.g., "Javed Akhtar receives a threatening email regarding his recent comments" or "The stock market rose by 2% following the federal announcement").
 Standard of Quality: > If the line were read in isolation, a reader should understand exactly who did what and why, without needing to refer back to the source text.
 - Return exactly 15 items
+- After the single-line description, add " || " and then an 80-100 word short summary. Do not include sources or citations. Do not include brackets.
 - Constraint:  Return only 1 when news are similar. E.g.
 Ranveer Singh - Dhurandhar marches towards Rs 750
 and
 Ranveer Singh - his film Dhurandhar marches towards RS 750 crores mark
 should result in single news item and not 2`,
     tv: `Using ONLY real-time web results get exactly 15 latest entertainment news items about Indian daily soap and TV industry actors trending from the past 24 hours. Each news item must be on a separate line in this exact format:
-[Person Name] - [Single line news description]
+[Person Name] - [Single line news description] || [80-100 word short summary without citations]
 
 Example:
-Hina Khan - Returns to popular TV show after break
-Rupali Ganguly - Show reaches 1000 episode milestone
+Hina Khan - Returns to popular TV show after break || A concise paragraph of 80-100 words summarizing the context, who/what/why/impact.
+Rupali Ganguly - Show reaches 1000 episode milestone || A concise paragraph of 80-100 words summarizing the context, who/what/why/impact.
 
 Requirements:
 - Use real, well-known Indian TV actors
@@ -129,17 +130,18 @@ Reject: Fragmented keyword pairs (e.g., "Javed Akhtar - threaten" or "Stock mark
 Accept: Full narrative summaries (e.g., "Javed Akhtar receives a threatening email regarding his recent comments" or "The stock market rose by 2% following the federal announcement").
 Standard of Quality: > If the line were read in isolation, a reader should understand exactly who did what and why, without needing to refer back to the source text.
 - Return exactly 15 items
+- After the single-line description, add " || " and then an 80-100 word short summary. Do not include sources or citations. Do not include brackets.
 - Constraint: return only 1 when news are similar. E.g.
 Gaurav khanna wins big boss 18
 and
 Gaurav khanna revived his tv career after big boss 18 win
 should result in single news item and not 2`,
     hollywood: `Using ONLY real-time web results get exactly 15 latest entertainment news items about American Hollywood actors and singers trending from the past 24 hours. Each news item must be on a separate line in this exact format:
-[Person Name] - [Single line news description]
+[Person Name] - [Single line news description] || [80-100 word short summary without citations]
 
 Example:
-Leonardo DiCaprio - Signs for climate change documentary
-Taylor Swift - Announces surprise album release
+Leonardo DiCaprio - Signs for climate change documentary || A concise paragraph of 80-100 words summarizing the context, who/what/why/impact.
+Taylor Swift - Announces surprise album release || A concise paragraph of 80-100 words summarizing the context, who/what/why/impact.
 
 Requirements:
 - Use real, well-known Hollywood celebrities
@@ -150,6 +152,7 @@ Reject: Fragmented keyword pairs (e.g., "Javed Akhtar - threaten" or "Stock mark
 Accept: Full narrative summaries (e.g., "Javed Akhtar receives a threatening email regarding his recent comments" or "The stock market rose by 2% following the federal announcement").
 Standard of Quality: > If the line were read in isolation, a reader should understand exactly who did what and why, without needing to refer back to the source text.
 - Return exactly 15 items
+- After the single-line description, add " || " and then an 80-100 word short summary. Do not include sources or citations. Do not include brackets.
 - Constraint:  return only 1 when news are similar. E.g.
 Killing of Rob Reiner and his wife stun hollywood
 and
@@ -212,39 +215,38 @@ should result in single news item and not 2`
       const data = await response.json();
 const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
 const lines = text.split("\n").filter((line: string) => line.trim().length > 0);
-const newsItems: { news_text: string; person_name: string; search_query: string }[] = [];
+const newsItems: { news_text: string; person_name: string; search_query: string; news_body: string }[] = [];
 
 for (const line of lines) {
   const match = line.match(/^(?:\d+\.\s*)?(.+?)\s*[-–]\s*(.+)$/);
   if (match && newsItems.length < 15) {
-    let [, personName, newsText] = match;
-    personName = personName.trim();
-
-    // find first occurrence of '[' or '[cite' or '[ cite' (case-insensitive)
-    const lower = newsText.toLowerCase();
-    let cutIndex = -1;
-
-    const indexBracket = lower.indexOf('[');
-    if (indexBracket !== -1) cutIndex = indexBracket;
-
-    // also check for explicit '[cite' and '[ cite' but '[' handling above already covers them;
-    // keep checks for clarity and in case you want different behavior later
-    const indexCiteNoSpace = lower.indexOf('[cite');
-    if (indexCiteNoSpace !== -1) cutIndex = cutIndex === -1 ? indexCiteNoSpace : Math.min(cutIndex, indexCiteNoSpace);
-
-    const indexCiteWithSpace = lower.indexOf('[ cite');
-    if (indexCiteWithSpace !== -1) cutIndex = cutIndex === -1 ? indexCiteWithSpace : Math.min(cutIndex, indexCiteWithSpace);
-
-    if (cutIndex !== -1) {
-      newsText = newsText.slice(0, cutIndex);
-    }
-
-    const cleanedNewsText = newsText.trim();
-
+    const personNameRaw = match[1];
+    const newsTextRaw = match[2];
+    const personName = personNameRaw.trim();
+    const splitIdx = newsTextRaw.indexOf('||');
+    const headlinePart = splitIdx >= 0 ? newsTextRaw.slice(0, splitIdx) : newsTextRaw;
+    const summaryPart = splitIdx >= 0 ? newsTextRaw.slice(splitIdx + 2) : '';
+    const stripCitations = (s: string) => {
+      const lower = s.toLowerCase();
+      let cutIndex = -1;
+      const indexBracket = lower.indexOf('[');
+      if (indexBracket !== -1) cutIndex = indexBracket;
+      const indexCiteNoSpace = lower.indexOf('[cite');
+      if (indexCiteNoSpace !== -1) cutIndex = cutIndex === -1 ? indexCiteNoSpace : Math.min(cutIndex, indexCiteNoSpace);
+      const indexCiteWithSpace = lower.indexOf('[ cite');
+      if (indexCiteWithSpace !== -1) cutIndex = cutIndex === -1 ? indexCiteWithSpace : Math.min(cutIndex, indexCiteWithSpace);
+      if (cutIndex !== -1) {
+        s = s.slice(0, cutIndex);
+      }
+      return s.trim();
+    };
+    const cleanedHeadline = stripCitations(headlinePart.trim());
+    const cleanedSummary = stripCitations(summaryPart.trim());
     newsItems.push({
-      news_text: cleanedNewsText,
+      news_text: cleanedHeadline,
       person_name: personName,
-      search_query: `${personName} ${cleanedNewsText}`
+      search_query: `${personName} ${cleanedHeadline}`,
+      news_body: cleanedSummary
     });
   }
 }
@@ -527,18 +529,24 @@ async function updateNewsForCategory(supabase: any, category: string) {
     if (deleteError) {
       console.error(`Error clearing old news for ${category}:`, deleteError);
     }
-    // Try insert with youtube_url; if schema lacks column, fall back to insertion without youtube_url
-    let insertError: any = null;
+    // Try insert with optional columns; if schema lacks columns, fall back progressively
+    let insertError: unknown = null;
+    let payload: Record<string, unknown>[] = newsWithImages as unknown as Record<string, unknown>[];
     {
-      const { error } = await supabase.from(tableName).insert(newsWithImages);
+      const { error } = await supabase.from(tableName).insert(payload);
       insertError = error || null;
     }
-    if (insertError && typeof insertError.message === 'string' && /column.*youtube_url.*does not exist/i.test(insertError.message)) {
+    if (insertError && typeof (insertError as any).message === 'string' && /column.*youtube_url.*does not exist/i.test((insertError as any).message)) {
       console.warn(`youtube_url column missing in ${tableName}, inserting without it`);
-      const fallback = newsWithImages.map(({ youtube_url, ...rest }) => rest);
-      const { error: fbError } = await supabase.from(tableName).insert(fallback);
-      if (fbError) insertError = fbError;
-      else insertError = null;
+      payload = payload.map(({ youtube_url, ...rest }) => rest);
+      const { error: fbError } = await supabase.from(tableName).insert(payload);
+      insertError = fbError || null;
+    }
+    if (insertError && typeof (insertError as any).message === 'string' && /column.*news_body.*does not exist/i.test((insertError as any).message)) {
+      console.warn(`news_body column missing in ${tableName}, inserting without it`);
+      payload = payload.map(({ news_body, ...rest }) => rest);
+      const { error: fbError2 } = await supabase.from(tableName).insert(payload);
+      insertError = fbError2 || null;
     }
     if (insertError) {
       // Detect Postgres unique constraint violation (SQLSTATE '23505').
