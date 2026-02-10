@@ -34,15 +34,6 @@ function App() {
   const [notifMsg, setNotifMsg] = useState<string | null>(null);
   const [iosInlineBanner, setIosInlineBanner] = useState(false);
   const [iosStickyHint, setIosStickyHint] = useState(false);
-  const ua = typeof navigator !== 'undefined' ? navigator.userAgent || '' : '';
-  const isIOS = /iphone|ipad|ipod/i.test(ua);
-  const isStandalone = (typeof window !== 'undefined' &&
-    ((window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
-    ((navigator as any).standalone === true)));
-  const supportsSW = typeof navigator !== 'undefined' && 'serviceWorker' in navigator;
-  const supportsPush = typeof window !== 'undefined' && 'PushManager' in window;
-  const isSecure = typeof location !== 'undefined' &&
-    (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1');
 
   useEffect(() => {
     if (!selectedNews) {
@@ -303,11 +294,6 @@ function App() {
             {iosStickyHint && !notifsEnabled && (
               <p className="text-amber-300 text-xs font-semibold">
                 On iPhone, Install to Home Screen to enable notifications. Open in Safari → Share → Add to Home Screen.
-              </p>
-            )}
-            {isIOS && !notifsEnabled && (
-              <p className="text-slate-500 text-xs">
-                Diagnostics: Standalone {isStandalone ? 'Yes' : 'No'} | SW {supportsSW ? 'Yes' : 'No'} | Push {supportsPush ? 'Yes' : 'No'} | HTTPS {isSecure ? 'Yes' : 'No'}
               </p>
             )}
             <p className="text-slate-500 text-sm">
