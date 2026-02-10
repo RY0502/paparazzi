@@ -93,54 +93,54 @@ async function fetchGeminiKeyFromUrl(envUrlVar: string) {
 async function fetchFromGeminiWithKey(category: string, geminiApiKey: string) {
   const prompts: Record<string, string> = {
     bollywood: `Using ONLY real-time web results get exactly 15 latest entertainment news items about Indian Bollywood actors and singers trending from the past 24 hours. Each news item must be on a separate line in this exact format:
-[Person Name] - [Single line news description] || [80-100 word details of the news without citations]
+[Person Name] - [Single line news description] || [news details about 8 sentences long without citations]
 
 Example:
-Shah Rukh Khan - Announces new collaboration with international director || A paragraph of 80-100 words about the news context, who/what/why/impact.
-Deepika Padukone - Wins Best Actress award at film festival || A paragraph of 80-100 words about the news context, who/what/why/impact.
+Shah Rukh Khan - Announces new collaboration with international director || A paragraph of news details about 8 sentences long about the news context, who/what/why/impact.
+Deepika Padukone - Wins Best Actress award at film festival || A paragraph of news details about 8 sentences long about the news context, who/what/why/impact.
 
 Requirements:
 - Use real, well-known Bollywood celebrities
 - Keep each news item to one line
 - Make news current and tabloid worthy
 - Return exactly 15 items
-- After the single-line description, add " || " and then a 80-100 word details about the news. Do not include sources or citations. Do not include brackets.Important: Ensure minimum 80 words in deatils about the news
+- After the single-line description, add " || " and then news details atleast 8 sentences long. Do not include sources or citations. Do not include brackets.Important: Ensure the news details MUST be at least 8 sentences long
 - Constraint:  Return only 1 when news are similar. E.g.
 Ranveer Singh - Dhurandhar marches towards Rs 750
 and
 Ranveer Singh - his film Dhurandhar marches towards RS 750 crores mark
 should result in single news item and not 2`,
     tv: `Using ONLY real-time web results get exactly 15 latest entertainment news items about Indian daily soap and TV industry actors trending from the past 24 hours. Each news item must be on a separate line in this exact format:
-[Person Name] - [Single line news description] || [80-100 word details of the news without citations]
+[Person Name] - [Single line news description] || [news details about 8 sentences long without citations]
 
 Example:
-Hina Khan - Returns to popular TV show after break || A paragraph of 80-100 words about the news context, who/what/why/impact.
-Rupali Ganguly - Show reaches 1000 episode milestone || A paragraph of 80-100 words about the news context, who/what/why/impact.
+Hina Khan - Returns to popular TV show after break || A paragraph of news details about 8 sentences long  about the news context, who/what/why/impact.
+Rupali Ganguly - Show reaches 1000 episode milestone || A paragraph of news details about 8 sentences long  about the news context, who/what/why/impact.
 
 Requirements:
 - Use real, well-known Indian TV actors
 - Keep each news item to one line
 - Make news current and  tabloid worthy
 - Return exactly 15 items
-- After the single-line description, add " || " and then a 80-100 word details about the news. Do not include sources or citations. Do not include brackets.Important: Ensure minimum 80 words in deatils about the news
+- After the single-line description, add " || " and then news details atleast 8 sentences long. Do not include sources or citations. Do not include brackets.Important: Ensure the news details MUST be at least 8 sentences long
 - Constraint: return only 1 when news are similar. E.g.
 Gaurav khanna wins big boss 18
 and
 Gaurav khanna revived his tv career after big boss 18 win
 should result in single news item and not 2`,
     hollywood: `Using ONLY real-time web results get exactly 15 latest entertainment news items about American Hollywood actors and singers trending from the past 24 hours. Each news item must be on a separate line in this exact format:
-[Person Name] - [Single line news description] || [80-100 word details of the news without citations]
+[Person Name] - [Single line news description] || [news details about 8 sentences long without citations]
 
 Example:
-Leonardo DiCaprio - Signs for climate change documentary || A paragraph of 80-100 words about the news context, who/what/why/impact.
-Taylor Swift - Announces surprise album release || A paragraph of 80-100 words about the news context, who/what/why/impact.
+Leonardo DiCaprio - Signs for climate change documentary || A paragraph of news details about 8 sentences long about the news context, who/what/why/impact.
+Taylor Swift - Announces surprise album release || A paragraph of news details about 8 sentences long  about the news context, who/what/why/impact.
 
 Requirements:
 - Use real, well-known Hollywood celebrities
 - Keep each news item to one line
 - Make news current and tabloid worthy
 - Return exactly 15 items
-- After the single-line description, add " || " and then a 80-100 word details about the news. Do not include sources or citations. Do not include brackets.Important: Ensure minimum 80 words in deatils about the news
+- After the single-line description, add " || " and then  news details atleast 8 sentences long. Do not include sources or citations. Do not include brackets.Important: Ensure the news details MUST be at least 8 sentences long
 - Constraint:  return only 1 when news are similar. E.g.
 Killing of Rob Reiner and his wife stun hollywood
 and
@@ -230,10 +230,16 @@ for (const line of lines) {
     };
     const cleanedHeadline = stripCitations(headlinePart.trim());
     const cleanedSummary = stripCitations(summaryPart.trim());
+    const headlineFinal = (cleanedHeadline.split(/\s+/).filter(Boolean).length < 6)
+      ? (() => {
+          const w = cleanedSummary.split(/\s+/).filter(Boolean).slice(0, 10).join(' ');
+          return w ? `${w}...` : cleanedHeadline;
+        })()
+      : cleanedHeadline;
     newsItems.push({
-      news_text: cleanedHeadline,
+      news_text: headlineFinal,
       person_name: personName,
-      search_query: `${personName} ${cleanedHeadline}`,
+      search_query: `${personName} ${headlineFinal}`,
       news_body: cleanedSummary
     });
   }

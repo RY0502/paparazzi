@@ -263,7 +263,7 @@ function NewsDetail({ category, newsId, personName, newsTitle, youtubeUrl, onBac
                       )
                     ))}
                   </div>
-                  {!loading && content.trim().split(/\s+/).filter(Boolean).length < 150 && (
+                  {!loading && content.trim().split(/\s+/).filter(Boolean).length < 90 && (
                     <div className="mt-4 text-right">
                       <button
                         className="text-slate-300 hover:text-white underline underline-offset-4"
