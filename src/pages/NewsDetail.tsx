@@ -148,7 +148,7 @@ function NewsDetail({ category, newsId, personName, newsTitle, youtubeUrl, onBac
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex flex-col">
-      <div className="fixed top-0 left-0 right-0 z-10 bg-slate-950/30 backdrop-blur-2xl border-b border-white/10">
+      <div className="fixed top-0 left-0 right-0 z-10 bg-slate-950/30 backdrop-blur-2xl border-b border-white/10 safe-top">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center h-16 sm:h-20 gap-4">
             <button
@@ -190,7 +190,7 @@ function NewsDetail({ category, newsId, personName, newsTitle, youtubeUrl, onBac
         </div>
       </div>
 
-      <main className="flex-grow pt-28 pb-16 px-4 sm:px-6 lg:px-8">
+      <main className="flex-grow safe-pt-28 pb-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto">
           <div className="mb-12">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/5 backdrop-blur-md rounded-full mb-4 border border-white/10">

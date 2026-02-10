@@ -41,18 +41,18 @@ function buildPayload(stories: Awaited<ReturnType<typeof getTopStories>>) {
   const h = pick(stories["hollywood"]);
   const blocks: string[] = [];
   if (b) {
-    blocks.push(`BOLLYWOOD\n• ${b.person_name} — ${b.news_text}`);
+    blocks.push(`🎬 Bollywood\n• ${b.person_name} — ${b.news_text}`);
   }
   if (h) {
-    blocks.push(`HOLLYWOOD\n• ${h.person_name} — ${h.news_text}`);
+    blocks.push(`🌟 Hollywood\n• ${h.person_name} — ${h.news_text}`);
   }
   if (t) {
-    blocks.push(`TV\n• ${t.person_name} — ${t.news_text}`);
+    blocks.push(`📺 TV\n• ${t.person_name} — ${t.news_text}`);
   }
   const body = blocks.join("\n\n");
   const image = (b && b.image_url) || (t && t.image_url) || (h && h.image_url) || undefined;
   return {
-    title: "Paparazzi Daily • Top Stories",
+    title: "• It's Paparazzi time 😊 •",
     body: body || "Your daily entertainment highlights are here!",
     url: "/", // open app at root
     icon: "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/1f4f0.svg",

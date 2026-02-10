@@ -128,6 +128,16 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+
+  .safe-top {
+    padding-top: env(safe-area-inset-top);
+    padding-top: constant(safe-area-inset-top);
+  }
+
+  .safe-pt-28 {
+    padding-top: calc(7rem + env(safe-area-inset-top));
+    padding-top: calc(7rem + constant(safe-area-inset-top));
+  }
 }
 
 @keyframes gradient-shift {
