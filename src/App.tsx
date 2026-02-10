@@ -58,6 +58,15 @@ function App() {
     })();
   }, []);
 
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'scrollRestoration' in history) {
+      history.scrollRestoration = 'manual';
+    }
+    if (typeof window !== 'undefined') {
+      window.scrollTo(0, 0);
+    }
+  }, []);
+
   // Remove auto-prompt and persistent banner behavior; show iOS hint only on button click
 
   const loadNews = async (category: Category) => {
