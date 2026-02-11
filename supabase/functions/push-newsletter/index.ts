@@ -16,6 +16,17 @@ type NewsRow = {
   created_at: string;
 };
 
+function toBold(input: string) {
+  const mapChar = (ch: string) => {
+    const code = ch.codePointAt(0)!;
+    if (code >= 65 && code <= 90) return String.fromCodePoint(0x1D400 + (code - 65));
+    if (code >= 97 && code <= 122) return String.fromCodePoint(0x1D41A + (code - 97));
+    if (code >= 48 && code <= 57) return String.fromCodePoint(0x1D7CE + (code - 48));
+    return ch;
+  };
+  return Array.from(input).map(mapChar).join("");
+}
+
 async function getTopStories(supabase: ReturnType<typeof createClient>) {
   const categories = ["bollywood", "tv", "hollywood"] as const;
   const results: Record<string, NewsRow[]> = {};
@@ -41,18 +52,18 @@ function buildPayload(stories: Awaited<ReturnType<typeof getTopStories>>) {
   const h = pick(stories["hollywood"]);
   const blocks: string[] = [];
   if (b) {
-    blocks.push(`🎬 Bollywood\n• ${b.person_name} — ${b.news_text}`);
+    blocks.push(`🎬 ${toBold("Bollywood")}\n🔸 ${toBold(b.person_name)} — ${b.news_text}`);
   }
   if (h) {
-    blocks.push(`🌟 Hollywood\n• ${h.person_name} — ${h.news_text}`);
+    blocks.push(`📰 ${toBold("Hollywood")}\n🔸 ${toBold(h.person_name)} — ${h.news_text}`);
   }
   if (t) {
-    blocks.push(`📺 TV\n• ${t.person_name} — ${t.news_text}`);
+    blocks.push(`📺 ${toBold("TV")}\n🔸 ${toBold(t.person_name)} — ${t.news_text}`);
   }
   const body = blocks.join("\n\n");
   const image = (b && b.image_url) || (t && t.image_url) || (h && h.image_url) || undefined;
   return {
-    title: "• It's Paparazzi time 😊 •",
+    title: "🌟 It's Paparazzi time 🌟",
     body: body || "Your daily entertainment highlights are here!",
     url: "/", // open app at root
     icon: "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/1f4f0.svg",

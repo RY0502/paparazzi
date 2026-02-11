@@ -457,6 +457,7 @@ async function updateNewsForCategory(supabase: any, category: string) {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 6000);
       try {
+        console.log(`YouTube search query: ${q}`);
         const url =
           'https://www.googleapis.com/youtube/v3/search' +
           `?part=snippet&type=video&maxResults=1&q=${encodeURIComponent(q)}` +
@@ -480,6 +481,7 @@ async function updateNewsForCategory(supabase: any, category: string) {
     const verifySimilarYesNo = async (query: string, ytTitle: string): Promise<boolean> => {
       if (!OPENROUTER_PROXY) return false;
       const payload = `Respond strictly with yes or no whether these two titles are similar or not.\nTitle1: ${query}\nTitle2: ${ytTitle}`;
+      console.log(`LLM similarity check titles: "${query}" vs "${ytTitle}"`);
       const res = await fetch(OPENROUTER_PROXY, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain' },
@@ -493,7 +495,8 @@ async function updateNewsForCategory(supabase: any, category: string) {
       } catch {
         value = await res.text();
       }
-      const norm = value.replace(/<[^>]*>/g, '').trim().toLowerCase();
+      const match = String(value).toLowerCase().match(/^\s*(yes|no)\b/);
+      const norm = match ? match[1] : '';
       return norm === 'yes';
     };
     const newsWithImages = await Promise.all(newsItems.map(async (item) => {
