@@ -275,7 +275,7 @@ async function fetchFromGemini(category: string) {
   return fetchFromGeminiWithKey(category, geminiKey);
 }
 
-async function fetchPersonImage(personName: string) {
+async function fetchPersonImage(personName: string, category: string) {
   // Read Wikimedia env variables
   const WIKIMEDIA_ACCESS_TOKEN = Deno.env.get("WIKIMEDIA_ACCESS_TOKEN") || "";
   const WIKIMEDIA_APP_NAME = Deno.env.get("WIKIMEDIA_APP_NAME") || "";
@@ -295,6 +295,8 @@ async function fetchPersonImage(personName: string) {
   if (idx !== -1) {
     normalizedPersonName.slice(0, idx).trim();
   }
+
+  normalizedPersonName = normalizedPersonName + category;
 
   const params = new URLSearchParams({
     action: 'query',
@@ -500,7 +502,7 @@ async function updateNewsForCategory(supabase: any, category: string) {
       return norm === 'yes';
     };
     const newsWithImages = await Promise.all(newsItems.map(async (item) => {
-      const image_url = await fetchPersonImage(item.person_name);
+      const image_url = await fetchPersonImage(item.person_name, category);
       let youtube_url = '';
       if (shouldAttachVideo(item.news_text)) {
         const yt = await ytSearch(item.search_query || `${item.person_name} ${item.news_text}`);
