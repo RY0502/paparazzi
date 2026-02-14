@@ -296,7 +296,7 @@ async function fetchPersonImage(personName: string, category: string) {
     normalizedPersonName.slice(0, idx).trim();
   }
 
-  normalizedPersonName = normalizedPersonName + category;
+  normalizedPersonName = normalizedPersonName + ' ' + category;
 
   const params = new URLSearchParams({
     action: 'query',
