@@ -20,6 +20,7 @@ function NewsDetail({ category, newsId, personName, newsTitle, youtubeUrl, onBac
   const [error, setError] = useState<string | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const [dbYoutubeUrl, setDbYoutubeUrl] = useState<string | undefined>(undefined);
+  const [imageUrl, setImageUrl] = useState<string | undefined>(undefined);
   const [forceStream, setForceStream] = useState(false);
 
   useEffect(() => {
@@ -42,7 +43,7 @@ function NewsDetail({ category, newsId, personName, newsTitle, youtubeUrl, onBac
         const tableName = `${category}_news`;
         const { data: row, error: selErr } = await client
           .from(tableName)
-          .select('id,youtube_url,news_body')
+          .select('id,youtube_url,news_body,image_url')
           .eq('id', newsId)
           .limit(1)
           .maybeSingle();
@@ -51,6 +52,9 @@ function NewsDetail({ category, newsId, personName, newsTitle, youtubeUrl, onBac
         }
         if (row?.youtube_url) {
           setDbYoutubeUrl(row.youtube_url as string);
+        }
+        if (row?.image_url) {
+          setImageUrl(row.image_url as string);
         }
         if (!forceStream && row?.news_body && String(row.news_body).trim().length > 0) {
           setContent(String(row.news_body));
@@ -212,6 +216,13 @@ function NewsDetail({ category, newsId, personName, newsTitle, youtubeUrl, onBac
                 <span className="text-sm font-medium">
                   {Math.ceil(content.split(' ').length / 200)} min read
                 </span>
+              {imageUrl && (
+                <img
+                  src={imageUrl}
+                  alt={personName}
+                  className="ml-2 w-6 h-6 sm:w-7 sm:h-7 rounded object-cover"
+                />
+              )}
               </div>
             </div>
             <div className="h-1 w-32 bg-gradient-to-r from-rose-500 to-pink-500 rounded-full"></div>
