@@ -39,14 +39,22 @@ Deno.serve(async (req) => {
     }
 
     const groq = new Groq({ apiKey });
-    const chatCompletion = await groq.chat.completions.create({
-      messages: [
-        { role: "system", content: payload.system },
-        { role: "user", content: payload.user },
-      ],
-      model: "openai/gpt-oss-20b",
-      stream: false,
-    });
+    const callOnce = () =>
+      groq.chat.completions.create({
+        messages: [
+          { role: "system", content: payload.system },
+          { role: "user", content: payload.user },
+        ],
+        model: "openai/gpt-oss-20b",
+        stream: false,
+      });
+    let chatCompletion;
+    try {
+      chatCompletion = await callOnce();
+    } catch {
+      await new Promise((r) => setTimeout(r, 2000));
+      chatCompletion = await callOnce();
+    }
 
     const content = chatCompletion.choices?.[0]?.message?.content ?? "";
     return new Response(JSON.stringify({ content }), {
