@@ -93,7 +93,7 @@ async function fetchGeminiKeyFromUrl(envUrlVar: string) {
 async function fetchFromGeminiWithKey(category: string, geminiApiKey: string) {
   const prompts: Record<string, string> = {
     bollywood: `Using ONLY real-time web results get exactly 15 latest breaking entertainment news items about Indian Bollywood actors and singers trending from the past 24 hours. Each news item must be on a separate line in this exact format:
-[Person Name] - [Single line news description] || [news details about 8 sentences long without citations]
+[Person Name] - [Short single-line headline (<=12 words)] <SEP> [news details about 6-8 sentences, no citations]
 
 Example:
 Shah Rukh Khan - Announces new collaboration with international director || A paragraph of news details about 8 sentences long about the news context, who/what/why/impact.
@@ -104,14 +104,16 @@ Requirements:
 - Keep each news item to one line
 - Make news current and tabloid worthy
 - Return exactly 15 items
-- After the single-line description, add " || " and then news details atleast 8 sentences long. Do not include sources or citations. Do not include brackets.Important: Ensure the news details MUST be at least 8 sentences long
+- The single-line description must be short like a title, maximum 12 words
+- After the single-line description, add " <SEP> " and then news details 6-8 sentences long. Do not include sources or citations. Do not include brackets. Important: Ensure the news details MUST be at least 6 sentences long
+- Do not use "||" anywhere. Use ONLY "<SEP>" as the separator
 - Constraint:  Return only 1 when news are similar. E.g.
 Ranveer Singh - Dhurandhar marches towards Rs 750
 and
 Ranveer Singh - his film Dhurandhar marches towards RS 750 crores mark
 should result in single news item and not 2`,
     tv: `Using ONLY real-time web results get exactly 15 latest breaking entertainment news items about Indian daily soap and TV industry actors trending from the past 24 hours. Each news item must be on a separate line in this exact format:
-[Person Name] - [Single line news description] || [news details about 8 sentences long without citations]
+[Person Name] - [Short single-line headline (<=12 words)] <SEP> [news details about 6-8 sentences, no citations]
 
 Example:
 Hina Khan - Returns to popular TV show after break || A paragraph of news details about 8 sentences long  about the news context, who/what/why/impact.
@@ -122,14 +124,16 @@ Requirements:
 - Keep each news item to one line
 - Make news current and  tabloid worthy
 - Return exactly 15 items
-- After the single-line description, add " || " and then news details atleast 8 sentences long. Do not include sources or citations. Do not include brackets.Important: Ensure the news details MUST be at least 8 sentences long
+- The single-line description must be short like a title, maximum 12 words
+- After the single-line description, add " <SEP> " and then news details 6-8 sentences long. Do not include sources or citations. Do not include brackets. Important: Ensure the news details MUST be at least 6 sentences long
+- Do not use "||" anywhere. Use ONLY "<SEP>" as the separator
 - Constraint: return only 1 when news are similar. E.g.
 Gaurav khanna wins big boss 18
 and
 Gaurav khanna revived his tv career after big boss 18 win
 should result in single news item and not 2`,
     hollywood: `Using ONLY real-time web results get exactly 15 latest breaking entertainment news items about American Hollywood actors and singers trending from the past 24 hours. Each news item must be on a separate line in this exact format:
-[Person Name] - [Single line news description] || [news details about 8 sentences long without citations]
+[Person Name] - [Short single-line headline (<=12 words)] <SEP> [news details about 6-8 sentences, no citations]
 
 Example:
 Leonardo DiCaprio - Signs for climate change documentary || A paragraph of news details about 8 sentences long about the news context, who/what/why/impact.
@@ -140,7 +144,9 @@ Requirements:
 - Keep each news item to one line
 - Make news current and tabloid worthy
 - Return exactly 15 items
-- After the single-line description, add " || " and then  news details atleast 8 sentences long. Do not include sources or citations. Do not include brackets.Important: Ensure the news details MUST be at least 8 sentences long
+- The single-line description must be short like a title, maximum 12 words
+- After the single-line description, add " <SEP> " and then news details 6-8 sentences long. Do not include sources or citations. Do not include brackets. Important: Ensure the news details MUST be at least 6 sentences long
+- Do not use "||" anywhere. Use ONLY "<SEP>" as the separator
 - Constraint:  return only 1 when news are similar. E.g.
 Killing of Rob Reiner and his wife stun hollywood
 and
@@ -211,9 +217,9 @@ for (const line of lines) {
     const personNameRaw = match[1];
     const newsTextRaw = match[2];
     const personName = personNameRaw.trim();
-    const splitIdx = newsTextRaw.indexOf('||');
-    const headlinePart = splitIdx >= 0 ? newsTextRaw.slice(0, splitIdx) : newsTextRaw;
-    const summaryPart = splitIdx >= 0 ? newsTextRaw.slice(splitIdx + 2) : '';
+    const parts = newsTextRaw.split('<SEP>');
+    const headlinePart = parts[0] ? parts[0] : newsTextRaw;
+    const summaryPart = parts[1] ? parts[1] : '';
     const stripCitations = (s: string) => {
       const lower = s.toLowerCase();
       let cutIndex = -1;

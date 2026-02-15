@@ -210,20 +210,20 @@ function NewsDetail({ category, newsId, personName, newsTitle, youtubeUrl, onBac
               <span className="text-slate-400 mx-3">—</span>
               <span className="text-white">{newsTitle}</span>
             </h1>
-            <div className="flex items-center justify-between text-slate-400 mb-6">
+            <div className="flex items-center gap-4 text-slate-400 mb-6">
               <div className="flex items-center gap-2">
                 <Clock className="w-4 h-4" />
                 <span className="text-sm font-medium">
                   {Math.ceil(content.split(' ').length / 200)} min read
                 </span>
+                {imageUrl && (
+                  <img
+                    src={imageUrl}
+                    alt={personName}
+                    className="ml-2 w-6 h-6 sm:w-7 sm:h-7 rounded object-cover"
+                  />
+                )}
               </div>
-              {imageUrl && (
-                <img
-                  src={imageUrl}
-                  alt={personName}
-                  className="w-6 h-6 sm:w-7 sm:h-7 rounded object-cover"
-                />
-              )}
               </div>
             <div className="h-1 w-32 bg-gradient-to-r from-rose-500 to-pink-500 rounded-full"></div>
           </div>
