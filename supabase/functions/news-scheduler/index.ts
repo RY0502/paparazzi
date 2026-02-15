@@ -302,12 +302,12 @@ async function fetchPersonImage(personName: string, category: string) {
     normalizedPersonName.slice(0, idx).trim();
   }
 
-  normalizedPersonName = normalizedPersonName + ' ' + category;
+  const normalizedPersonNameWithCat = normalizedPersonName + ' ' + category;
 
   const params = new URLSearchParams({
     action: 'query',
     generator: 'search',
-    gsrsearch: normalizedPersonName,
+    gsrsearch: normalizedPersonNameWithCat,
     gsrnamespace: '6',
     gsrlimit: '10',
     prop: 'imageinfo',
@@ -446,7 +446,7 @@ async function fetchPersonImage(personName: string, category: string) {
       for (const page of pages) {
         const info = page?.imageinfo?.[0];
         const imageUrl = info?.thumburl || info?.url;
-        if (imageUrl && isValidImageUrl(imageUrl) && await hasOnlyPersonName(imageUrl, personName)) {
+        if (imageUrl && isValidImageUrl(imageUrl) && await hasOnlyPersonName(imageUrl, normalizedPersonName)) {
           candidates.push(imageUrl);
         }
       }
@@ -456,7 +456,7 @@ async function fetchPersonImage(personName: string, category: string) {
         return FALLBACK_IMAGE();
       }
 
-      const matches = candidates.filter(c => filenameMatchesPerson(c, personName));
+      const matches = candidates.filter(c => filenameMatchesPerson(c, normalizedPersonName));
 if (matches.length === 0) {
   return candidates[0];// or simply `return;`
 }
