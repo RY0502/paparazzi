@@ -7,6 +7,11 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
 
+type GroqRequest = {
+  system: string;
+  user: string;
+};
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 200, headers: corsHeaders });
@@ -19,23 +24,27 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const groq = new Groq({ apiKey });
+    if (req.method !== "POST") {
+      return new Response(JSON.stringify({ error: "Method not allowed" }), {
+        status: 405,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const payload = (await req.json().catch(() => null)) as GroqRequest | null;
+    if (!payload || typeof payload.system !== "string" || typeof payload.user !== "string") {
+      return new Response(JSON.stringify({ error: "Invalid payload: requires 'system' and 'user' strings" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
-    const imageUrl = "https://upload.wikimedia.org/wikipedia/commons/f/f2/LPU-v1-die.jpg";
+    const groq = new Groq({ apiKey });
     const chatCompletion = await groq.chat.completions.create({
       messages: [
-        {
-          role: "user",
-          content: [
-            { type: "text", text: "What's in this image?" },
-            { type: "image_url", image_url: { url: imageUrl } },
-          ],
-        },
+        { role: "system", content: payload.system },
+        { role: "user", content: payload.user },
       ],
-      model: "meta-llama/llama-4-scout-17b-16e-instruct",
-      temperature: 1,
-      max_completion_tokens: 1024,
-      top_p: 1,
+      model: "openai/gpt-oss-20b",
       stream: false,
     });
 

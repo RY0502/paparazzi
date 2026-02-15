@@ -1,6 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
-import Groq from "npm:groq-sdk";
+// Groq is invoked via a generic edge function (groq-call)
 
 const API_KEY = Deno.env.get("YOUTUBE_API_KEY") || "";
 const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY") || "";
@@ -54,24 +54,25 @@ async function ytSearchTitle(q: string): Promise<{ id: string; title: string } |
 }
 
 async function groqSimilar(newsText: string, ytTitle: string): Promise<boolean> {
-  if (!GROQ_API_KEY) return false;
-  const groq = new Groq({ apiKey: GROQ_API_KEY });
   console.log(`[youtube-first] LLM similarity check titles:\nTitle1: "${newsText}"\nTitle2: "${ytTitle}"`);
-  const completion = await groq.chat.completions.create({
-    messages: [
-      {
-        role: "system",
-        content:
-          "You are an expert at performing similarity check on two given strings. Irrespective of the language you can find out whether the two strings are similar in meaning or represent same context",
-      },
-      {
-        role: "user",
-        content: `Respond strictly with yes or no whether these two titles are of similar news of the celebrity or not.\nTitle1: ${newsText}\nTitle2: ${ytTitle}`,
-      },
-    ],
-    model: "openai/gpt-oss-20b",
+  const endpoint = Deno.env.get("GROQ_CALL_URL") || "";
+  if (!endpoint) {
+    console.warn("[youtube-first] GROQ_CALL_URL not set");
+    return false;
+  }
+  const system =
+    "You are an expert at performing similarity check on two given strings. Irrespective of the language you can find out whether the two strings are similar in meaning or represent same context";
+  const user = `Respond strictly with yes or no whether these two titles are of similar news of the celebrity or not.\nTitle1: ${newsText}\nTitle2: ${ytTitle}`;
+  const r = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || ""}`,
+    },
+    body: JSON.stringify({ system, user }),
   });
-  const content = completion.choices?.[0]?.message?.content || "";
+  const json = await r.json().catch(() => null) as { content?: string } | null;
+  const content = json?.content || "";
   const norm = yesNo(content);
   console.log(`[youtube-first] LLM raw="${content}" normalized="${norm}"`);
   return norm === "yes";

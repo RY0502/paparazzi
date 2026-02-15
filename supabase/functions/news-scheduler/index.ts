@@ -92,7 +92,7 @@ async function fetchGeminiKeyFromUrl(envUrlVar: string) {
 
 async function fetchFromGeminiWithKey(category: string, geminiApiKey: string) {
   const prompts: Record<string, string> = {
-    bollywood: `Using ONLY real-time web results get exactly 15 latest entertainment news items about Indian Bollywood actors and singers trending from the past 24 hours. Each news item must be on a separate line in this exact format:
+    bollywood: `Using ONLY real-time web results get exactly 15 latest breaking entertainment news items about Indian Bollywood actors and singers trending from the past 24 hours. Each news item must be on a separate line in this exact format:
 [Person Name] - [Single line news description] || [news details about 8 sentences long without citations]
 
 Example:
@@ -110,7 +110,7 @@ Ranveer Singh - Dhurandhar marches towards Rs 750
 and
 Ranveer Singh - his film Dhurandhar marches towards RS 750 crores mark
 should result in single news item and not 2`,
-    tv: `Using ONLY real-time web results get exactly 15 latest entertainment news items about Indian daily soap and TV industry actors trending from the past 24 hours. Each news item must be on a separate line in this exact format:
+    tv: `Using ONLY real-time web results get exactly 15 latest breaking entertainment news items about Indian daily soap and TV industry actors trending from the past 24 hours. Each news item must be on a separate line in this exact format:
 [Person Name] - [Single line news description] || [news details about 8 sentences long without citations]
 
 Example:
@@ -128,7 +128,7 @@ Gaurav khanna wins big boss 18
 and
 Gaurav khanna revived his tv career after big boss 18 win
 should result in single news item and not 2`,
-    hollywood: `Using ONLY real-time web results get exactly 15 latest entertainment news items about American Hollywood actors and singers trending from the past 24 hours. Each news item must be on a separate line in this exact format:
+    hollywood: `Using ONLY real-time web results get exactly 15 latest breaking entertainment news items about American Hollywood actors and singers trending from the past 24 hours. Each news item must be on a separate line in this exact format:
 [Person Name] - [Single line news description] || [news details about 8 sentences long without citations]
 
 Example:
@@ -399,6 +399,35 @@ async function fetchPersonImage(personName: string, category: string) {
         return false;
       };
 
+      const hasOnlyPersonName = async (imageUrl: string, personName: string): Promise<boolean> => {
+        const endpoint = Deno.env.get("GROQ_CALL_URL") || "";
+        if (!endpoint) return false;
+        const system =
+          "You are a URL Content Analyzer. Your task is to determine if a provided URL contains ONLY the name of the specified celebrity. Rules: 1. If the URL contains any other person's name alongside the celebrity, the answer is 'no'. 2. If the URL contains words suggesting other people are present (e.g., 'and', 'with', 'plus', 'group', '&'), the answer is 'no'. 3. If the URL exclusively identifies the celebrity, even with dates or event names, the answer is 'yes'. 4. If the given person name is NOT in the URL, answer 'no'. Examples: URL: '...Shah_Rukh_Khan_and_Kajol.jpg' Name: 'Shah Rukh Khan' -> no. URL: '...Ranveer_Singh_&_Tamannaah.jpg' Name: 'Ranveer Singh' -> no. URL: '...Shahid_Kapoor_2009.jpg' Name: 'Shahid_Kapoor' -> yes. Instructions: Analyze the provided URL and Person Name and respond with ONLY 'yes' or 'no'.";
+        const user = `Respond strictly with yes or no whether the url contains only given the celebrity name.\nurl: ${imageUrl}\ncelebrityName: ${personName}`;
+        try {
+          const r = await fetch(endpoint, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || ""}`,
+            },
+            body: JSON.stringify({ system, user }),
+          });
+          if (!r.ok) return false;
+          const j = await r.json().catch(() => null) as { content?: string } | null;
+          const content = j?.content || "";
+          const match = String(content).toLowerCase().match(/^\s*(yes|no)\b/);
+          const norm = match ? match[1] : "";
+          if (norm === "no") {
+            console.log(`[news-scheduler] hasOnlyPersonName: NO url="${imageUrl}" person="${personName}"`);
+          }
+          return norm === "yes";
+        } catch {
+          return false;
+        }
+      };
+
       const filenameMatchesPerson = (imageUrl: any, personName: string) => {
         if (!imageUrl) return false;
         const filename = String(imageUrl).toLowerCase();
@@ -411,7 +440,7 @@ async function fetchPersonImage(personName: string, category: string) {
       for (const page of pages) {
         const info = page?.imageinfo?.[0];
         const imageUrl = info?.thumburl || info?.url;
-        if (imageUrl && isValidImageUrl(imageUrl)) {
+        if (imageUrl && isValidImageUrl(imageUrl) && await hasOnlyPersonName(imageUrl, personName)) {
           candidates.push(imageUrl);
         }
       }
