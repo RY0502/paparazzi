@@ -376,116 +376,105 @@ async function fetchWikimediaApiResponse(personName: string): Promise<Response |
 async function fetchPersonImage(personName: string, category: string) {
   let normalizedPersonName = personName;
   const lower = normalizedPersonName.toLowerCase();
-  
   let marker = ' and ';
   let idx = lower.indexOf(marker);
   if (idx !== -1) {
-    normalizedPersonName.slice(0, idx).trim();
+    normalizedPersonName = normalizedPersonName.slice(0, idx).trim();
   }
-
   marker = ' & ';
   idx = lower.indexOf(marker);
   if (idx !== -1) {
-    normalizedPersonName.slice(0, idx).trim();
+    normalizedPersonName = normalizedPersonName.slice(0, idx).trim();
   }
+  const normalizedPersonNameWithCat = normalizedPersonName + ' ' + category;
 
- const normalizedPersonNameWithCat = normalizedPersonName + ' ' + category;
+  const isValidImageUrl = (imageUrl: any) => {
+    if (!imageUrl) return false;
+    const urlLower = String(imageUrl).toLowerCase();
+    if (urlLower.includes('.pdf')) return false;
+    if (urlLower.match(/\.(doc|docx|txt|odt|rtf)/)) return false;
+    if (urlLower.match(/\.(jpg|jpeg|png|gif|webp|svg)(\?|$)/)) return true;
+    if (urlLower.includes('/thumb/')) return true;
+    return false;
+  };
+
+  const hasOnlyPersonName = async (imageUrl: string, personName: string): Promise<boolean> => {
+    const endpoint = Deno.env.get("GROQ_CALL_URL") || "";
+    if (!endpoint) return false;
+    const apiKey = Deno.env.get("GROQ_API_KEY") || "";
+    if (!apiKey) return false;
+    const system =
+      "You are a URL Content Analyzer. Your task is to determine if a provided URL contains ONLY the name of the specified celebrity with only two exception rules. Rules: 1. If the URL contains any other person's name alongside the celebrity, the answer is 'no'. 2.If the URL exclusively identifies the celebrity, even with dates or event names, the answer is 'yes'. 3. If the given person name is NOT in the URL, answer 'no'. 4.If the given person name is only in the URL, answer 'yes'. \n Exception rule one: If the URL contains words suggesting other people are present with the celebrity (only allowed words: 'and', '&', '+') and the other celebrity name is directly connected with the given celebrity in the url, the answer is 'yes'.\n Exception rule two: If the URL contains words suggesting the person was present at other people party/house (only allowed words: 'at') and the name connected with 'at' is the other celebrity name in the url, the answer is 'yes'.Examples: URL: '...Shah_Rukh_Khan_Kajol.jpg' Name: 'Shah Rukh Khan' -> no.URL: '...Shah_Rukh_Khan_and_Kajol.jpg' Name: 'Shah Rukh Khan' -> yes. URL: '...Shah_Rukh_Khan_and_Kajol_spotted_at_Sonu_Nigam_concert.jpg' Name: 'Sonu Nigam' -> no. URL: '...Ranveer_Singh_&_Tamannaah.jpg' Name: 'Ranveer Singh' -> yes. URL: '...Shahid_Kapoor_2009.jpg' Name: 'Shahid_Kapoor' -> yes. URL: '...Tamannaah_at_Ranveer_Singh_birthday_party.jpg' Name: 'Ranveer Singh' -> no. URL: '...Tamannaah_at_Ranveer_Singh_birthday_party.jpg' Name: 'Tamannaah' -> yes. Instructions: Analyze the provided URL and Person Name and respond with ONLY 'yes' or 'no'.";
+    const user = `Respond strictly with yes or no whether the url contains only given the celebrity name including exception cases.\nurl: ${imageUrl}\ncelebrityName: ${personName}`;
+    try {
+      const r = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || ""}`,
+        },
+        body: JSON.stringify({ system, user, api_key: apiKey }),
+      });
+      if (!r.ok) return false;
+      const j = await r.json().catch(() => null) as { content?: string } | null;
+      const content = j?.content || "";
+      const match = String(content).toLowerCase().match(/^\s*(yes|no)\b/);
+      const norm = match ? match[1] : "";
+      if (norm === "no") {
+        console.log(`[news-scheduler] hasOnlyPersonName: NO url="${imageUrl}" person="${personName}"`);
+      }
+      return norm === "yes";
+    } catch {
+      return false;
+    }
+  };
+
+  const filenameMatchesPerson = (imageUrl: any, personName: string) => {
+    if (!imageUrl) return false;
+    const filename = String(imageUrl).toLowerCase();
+    const nameParts = personName.toLowerCase().split(/\s+/).filter(p => p.length > 2);
+    if (nameParts.length === 0) return false;
+    return nameParts.some(part => filename.includes(part));
+  };
+
+  const selectBestFromData = async (data: any, isWithCat: boolean): Promise<string | null> => {
+    if (!data || !data.query || !data.query.pages) return null;
+    const pages = Object.values<any>(data.query.pages);
+    if (pages.length === 0) return null;
+    const candidates: string[] = [];
+    for (const page of pages) {
+      const info = page?.imageinfo?.[0];
+      const imageUrl = info?.thumburl || info?.url;
+      if (imageUrl && isValidImageUrl(imageUrl) && await hasOnlyPersonName(imageUrl, normalizedPersonName)) {
+        candidates.push(imageUrl);
+      }
+    }
+    if (candidates.length === 0) return null;
+    const matches = candidates.filter(c => filenameMatchesPerson(c, normalizedPersonName));
+    if (matches.length === 0) {
+      return isWithCat ? null : candidates[0];
+    }
+    const randomIndex = Math.floor(Math.random() * matches.length);
+    return matches[randomIndex];
+  };
 
   let response = await fetchWikimediaApiResponse(normalizedPersonNameWithCat);
   if (!response) {
     return FALLBACK_IMAGE();
   }
+  let data = await response.json().catch(() => null);
+  let selected = await selectBestFromData(data, true);
+  if (selected) return selected;
 
-      let data = await response.json().catch(() => null);
-      if (!data || !data.query || !data.query.pages) {
-        console.warn(`Wikimedia API returned no pages for ${normalizedPersonNameWithCat}`);
-        response = await fetchWikimediaApiResponse(normalizedPersonName);
-        if (!response) {
-        return FALLBACK_IMAGE();
-        }
-        
-        data = await response.json().catch(() => null);
-      if (!data || !data.query || !data.query.pages) {
-        console.warn(`Wikimedia API returned no pages for ${normalizedPersonName}`);
-        return FALLBACK_IMAGE();
-      }
-      }
+  response = await fetchWikimediaApiResponse(normalizedPersonName);
+  if (!response) {
+    return FALLBACK_IMAGE();
+  }
+  data = await response.json().catch(() => null);
+  selected = await selectBestFromData(data, false);
+  if (selected) return selected;
 
-      const pages = Object.values<any>(data.query.pages);
-      if (pages.length === 0) {
-        console.warn(`Wikimedia returned empty pages array for ${personName}`);
-        return FALLBACK_IMAGE();
-      }
-
-      const isValidImageUrl = (imageUrl: any) => {
-        if (!imageUrl) return false;
-        const urlLower = String(imageUrl).toLowerCase();
-        if (urlLower.includes('.pdf')) return false;
-        if (urlLower.match(/\.(doc|docx|txt|odt|rtf)/)) return false;
-        if (urlLower.match(/\.(jpg|jpeg|png|gif|webp|svg)(\?|$)/)) return true;
-        if (urlLower.includes('/thumb/')) return true;
-        return false;
-      };
-
-      const hasOnlyPersonName = async (imageUrl: string, personName: string): Promise<boolean> => {
-        const endpoint = Deno.env.get("GROQ_CALL_URL") || "";
-        if (!endpoint) return false;
-         const apiKey = Deno.env.get("GROQ_API_KEY") || "";
-        if (!apiKey) return false;
-        const system =
-          "You are a URL Content Analyzer. Your task is to determine if a provided URL contains ONLY the name of the specified celebrity with only two exception rules. Rules: 1. If the URL contains any other person's name alongside the celebrity, the answer is 'no'. 2.If the URL exclusively identifies the celebrity, even with dates or event names, the answer is 'yes'. 3. If the given person name is NOT in the URL, answer 'no'. 4.If the given person name is only in the URL, answer 'yes'. \n Exception rule: If the URL contains words suggesting other people are present with the celebrity (only allowed words: 'and', '&', '+') and the other celebrity name is directly connected with the given celebrity in the url, the answer is 'yes'.\n Exception rule: If the URL contains words suggesting the person was present at other people party/house (only allowed words: 'at') and the name connected with 'at'is othe other celebrity name in the url, the answer is 'yes'.Examples: URL: '...Shah_Rukh_Khan_Kajol.jpg' Name: 'Shah Rukh Khan' -> no.URL: '...Shah_Rukh_Khan_and_Kajol.jpg' Name: 'Shah Rukh Khan' -> yes. URL: '...Shah_Rukh_Khan_and_Kajol_spotted_at_Sonu_Nigam_concert.jpg' Name: 'Sonu Nigam' -> no. URL: '...Ranveer_Singh_&_Tamannaah.jpg' Name: 'Ranveer Singh' -> yes. URL: '...Shahid_Kapoor_2009.jpg' Name: 'Shahid_Kapoor' -> yes. URL: '...Tamannaah_at_Ranveer_Singh_birthday_party.jpg' Name: 'Ranveer Singh' -> no. URL: '...Tamannaah_at_Ranveer_Singh_birthday_party.jpg' Name: 'Tamannaah' -> yes. Instructions: Analyze the provided URL and Person Name and respond with ONLY 'yes' or 'no'.";
-        const user = `Respond strictly with yes or no whether the url contains only given the celebrity name including exception case.\nurl: ${imageUrl}\ncelebrityName: ${personName}`;
-        try {
-          const r = await fetch(endpoint, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || ""}`,
-            },
-            body: JSON.stringify({ system, user, api_key: apiKey }),
-          });
-          if (!r.ok) return false;
-          const j = await r.json().catch(() => null) as { content?: string } | null;
-          const content = j?.content || "";
-          const match = String(content).toLowerCase().match(/^\s*(yes|no)\b/);
-          const norm = match ? match[1] : "";
-          if (norm === "no") {
-            console.log(`[news-scheduler] hasOnlyPersonName: NO url="${imageUrl}" person="${personName}"`);
-          }
-          return norm === "yes";
-        } catch {
-          return false;
-        }
-      };
-
-      const filenameMatchesPerson = (imageUrl: any, personName: string) => {
-        if (!imageUrl) return false;
-        const filename = String(imageUrl).toLowerCase();
-        const nameParts = personName.toLowerCase().split(/\s+/).filter(p => p.length > 2);
-        if (nameParts.length === 0) return false;
-        return nameParts.some(part => filename.includes(part));
-      };
-
-      const candidates: string[] = [];
-      for (const page of pages) {
-        const info = page?.imageinfo?.[0];
-        const imageUrl = info?.thumburl || info?.url;
-        if (imageUrl && isValidImageUrl(imageUrl) && await hasOnlyPersonName(imageUrl, normalizedPersonName)) {
-          candidates.push(imageUrl);
-        }
-      }
-
-      if (candidates.length === 0) {
-        console.warn(`No valid candidate image URLs for ${personName}`);
-        return FALLBACK_IMAGE();
-      }
-
-      const matches = candidates.filter(c => filenameMatchesPerson(c, normalizedPersonName));
-if (matches.length === 0) {
-  return candidates[0];// or simply `return;`
-}
-const randomIndex = Math.floor(Math.random() * matches.length);
-return matches[randomIndex];
+  return FALLBACK_IMAGE();
 
   function FALLBACK_IMAGE() {
     return 'https://fr0jflsfvamy.objectstorage.eu-frankfurt-1.oci.customer-oci.com/n/fr0jflsfvamy/b/paparazzi/o/default.png';
