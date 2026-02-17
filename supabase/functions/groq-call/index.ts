@@ -10,6 +10,7 @@ const corsHeaders = {
 type GroqRequest = {
   system: string;
   user: string;
+  api_key: string;
 };
 
 Deno.serve(async (req) => {
@@ -17,13 +18,6 @@ Deno.serve(async (req) => {
     return new Response(null, { status: 200, headers: corsHeaders });
   }
   try {
-    const apiKey = Deno.env.get("GROQ_API_KEY");
-    if (!apiKey) {
-      return new Response(JSON.stringify({ error: "GROQ_API_KEY not configured" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
     if (req.method !== "POST") {
       return new Response(JSON.stringify({ error: "Method not allowed" }), {
         status: 405,
@@ -31,14 +25,20 @@ Deno.serve(async (req) => {
       });
     }
     const payload = (await req.json().catch(() => null)) as GroqRequest | null;
-    if (!payload || typeof payload.system !== "string" || typeof payload.user !== "string") {
-      return new Response(JSON.stringify({ error: "Invalid payload: requires 'system' and 'user' strings" }), {
+    if (
+      !payload ||
+      typeof payload.system !== "string" ||
+      typeof payload.user !== "string" ||
+      typeof payload.api_key !== "string" ||
+      !payload.api_key
+    ) {
+      return new Response(JSON.stringify({ error: "Invalid payload: requires 'system','user','api_key' strings" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const groq = new Groq({ apiKey });
+    const groq = new Groq({ apiKey: payload.api_key });
     const callOnce = () =>
       groq.chat.completions.create({
         messages: [

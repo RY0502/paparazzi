@@ -60,6 +60,10 @@ async function groqSimilar(newsText: string, ytTitle: string): Promise<boolean> 
     console.warn("[youtube-first] GROQ_CALL_URL not set");
     return false;
   }
+  if (!GROQ_API_KEY) {
+    console.warn("[youtube-first] GROQ_API_KEY not set");
+    return false;
+  }
   const system =
     "You are an expert at performing similarity check on two given strings. Irrespective of the language you can find out whether the two strings are similar in meaning or represent same context";
   const user = `Respond strictly with yes or no whether these two titles are of similar news of the celebrity or not.\nTitle1: ${newsText}\nTitle2: ${ytTitle}`;
@@ -69,7 +73,7 @@ async function groqSimilar(newsText: string, ytTitle: string): Promise<boolean> 
       "Content-Type": "application/json",
       Authorization: `Bearer ${Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || ""}`,
     },
-    body: JSON.stringify({ system, user }),
+    body: JSON.stringify({ system, user, api_key: GROQ_API_KEY }),
   });
   const json = await r.json().catch(() => null) as { content?: string } | null;
   const content = json?.content || "";

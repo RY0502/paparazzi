@@ -281,48 +281,29 @@ async function fetchFromGemini(category: string) {
   return fetchFromGeminiWithKey(category, geminiKey);
 }
 
-async function fetchPersonImage(personName: string, category: string) {
-  // Read Wikimedia env variables
+async function fetchWikimediaApiResponse(personName: string): Promise<Response | null> {
   const WIKIMEDIA_ACCESS_TOKEN = Deno.env.get("WIKIMEDIA_ACCESS_TOKEN") || "";
   const WIKIMEDIA_APP_NAME = Deno.env.get("WIKIMEDIA_APP_NAME") || "";
   const WIKIMEDIA_REFERER = Deno.env.get("WIKIMEDIA_REFERER") || "";
 
-  let normalizedPersonName = personName;
-  const lower = normalizedPersonName.toLowerCase();
-  
-  let marker = ' and ';
-  let idx = lower.indexOf(marker);
-  if (idx !== -1) {
-    normalizedPersonName.slice(0, idx).trim();
-  }
-
-  marker = ' & ';
-  idx = lower.indexOf(marker);
-  if (idx !== -1) {
-    normalizedPersonName.slice(0, idx).trim();
-  }
-
-  const normalizedPersonNameWithCat = normalizedPersonName + ' ' + category;
-
   const params = new URLSearchParams({
-    action: 'query',
-    generator: 'search',
-    gsrsearch: normalizedPersonNameWithCat,
-    gsrnamespace: '6',
-    gsrlimit: '10',
-    prop: 'imageinfo',
-    iiprop: 'url',
-    iiurlwidth: '800',
-    format: 'json',
-    origin: '*'
+    action: "query",
+    generator: "search",
+    gsrsearch: personName,
+    gsrnamespace: "6",
+    gsrlimit: "10",
+    prop: "imageinfo",
+    iiprop: "url",
+    iiurlwidth: "800",
+    format: "json",
+    origin: "*"
   });
 
   let url = `https://commons.wikimedia.org/w/api.php?${params.toString()}`;
-  if (url.endsWith('.')) {
+  if (url.endsWith(".")) {
     url = url.slice(0, -1);
   }
 
-  // Fetch configuration
   const WM_FETCH_TIMEOUT_MS = 10000;
   const WM_MAX_RETRIES = 5;
   const WM_BASE_RETRY_MS = 1000;
@@ -341,9 +322,8 @@ async function fetchPersonImage(personName: string, category: string) {
 
     try {
       const headers: Record<string, string> = {
-        "Accept": "application/json"
+        Accept: "application/json"
       };
-      // Add User-Agent and Authorization from env if present
       if (WIKIMEDIA_APP_NAME) {
         headers["User-Agent"] = WIKIMEDIA_APP_NAME;
       }
@@ -362,31 +342,73 @@ async function fetchPersonImage(personName: string, category: string) {
       clearTimeout(timeout);
 
       if (!response.ok) {
-        lastErr = new Error(`Wikimedia API returned ${response.status} ${response.statusText}`);
+         lastErr = new Error(`Wikimedia API returned ${response.status} ${response.statusText}`);
         console.warn(`Wikimedia API non-OK ${response.status} for "${personName}"`);
 
         if (response.status === 403 || response.status === 429) {
-          const bodyText = await response.text().catch(() => "");
-          console.warn(`Wikimedia response body (truncated): ${bodyText.slice(0, 500)}`);
+          //const bodyText = await response.text().catch(() => "");
           const extra = response.status === 403 ? 5000 : 0;
           const waitMs = randomJitter(WM_BASE_RETRY_MS * Math.pow(2, attempt - 1) + extra);
           await sleep(waitMs);
           continue;
         }
-
         if (response.status >= 500 && response.status < 600) {
           const waitMs = randomJitter(WM_BASE_RETRY_MS * Math.pow(2, attempt - 1));
           await sleep(waitMs);
           continue;
         }
-
-        return FALLBACK_IMAGE();
+        return null;
       }
 
-      const data = await response.json().catch(() => null);
+      return response;
+    } catch (err) {
+      clearTimeout(timeout);
+      lastErr = err;
+      const waitMs = randomJitter(WM_BASE_RETRY_MS * Math.pow(2, attempt - 1));
+      await sleep(waitMs);
+      continue;
+    }
+  }
+
+  return null;
+}
+
+async function fetchPersonImage(personName: string, category: string) {
+  let normalizedPersonName = personName;
+  const lower = normalizedPersonName.toLowerCase();
+  
+  let marker = ' and ';
+  let idx = lower.indexOf(marker);
+  if (idx !== -1) {
+    normalizedPersonName.slice(0, idx).trim();
+  }
+
+  marker = ' & ';
+  idx = lower.indexOf(marker);
+  if (idx !== -1) {
+    normalizedPersonName.slice(0, idx).trim();
+  }
+
+ const normalizedPersonNameWithCat = normalizedPersonName + ' ' + category;
+
+  let response = await fetchWikimediaApiResponse(normalizedPersonNameWithCat);
+  if (!response) {
+    return FALLBACK_IMAGE();
+  }
+
+      let data = await response.json().catch(() => null);
       if (!data || !data.query || !data.query.pages) {
-        console.warn(`Wikimedia API returned no pages for ${personName}`);
+        console.warn(`Wikimedia API returned no pages for ${normalizedPersonNameWithCat}`);
+        response = await fetchWikimediaApiResponse(normalizedPersonName);
+        if (!response) {
         return FALLBACK_IMAGE();
+        }
+        
+        data = await response.json().catch(() => null);
+      if (!data || !data.query || !data.query.pages) {
+        console.warn(`Wikimedia API returned no pages for ${normalizedPersonName}`);
+        return FALLBACK_IMAGE();
+      }
       }
 
       const pages = Object.values<any>(data.query.pages);
@@ -408,8 +430,10 @@ async function fetchPersonImage(personName: string, category: string) {
       const hasOnlyPersonName = async (imageUrl: string, personName: string): Promise<boolean> => {
         const endpoint = Deno.env.get("GROQ_CALL_URL") || "";
         if (!endpoint) return false;
+         const apiKey = Deno.env.get("GROQ_API_KEY") || "";
+        if (!apiKey) return false;
         const system =
-          "You are a URL Content Analyzer. Your task is to determine if a provided URL contains ONLY the name of the specified celebrity with only one exception rule. Rules: 1. If the URL contains any other person's name alongside the celebrity, the answer is 'no'. 2.If the URL exclusively identifies the celebrity, even with dates or event names, the answer is 'yes'. 3. If the given person name is NOT in the URL, answer 'no'. 4.If the given person name is only in the URL, answer 'yes'. \n Exception rule: If the URL contains words suggesting other people are present with the celebrity (only allowed words: 'and', 'with', 'plus', '&'), the answer is 'yes'.Examples: URL: '...Shah_Rukh_Khan_Kajol.jpg' Name: 'Shah Rukh Khan' -> no.URL: '...Shah_Rukh_Khan_and_Kajol.jpg' Name: 'Shah Rukh Khan' -> yes. URL: '...Ranveer_Singh_&_Tamannaah.jpg' Name: 'Ranveer Singh' -> yes. URL: '...Shahid_Kapoor_2009.jpg' Name: 'Shahid_Kapoor' -> yes. URL: '...Tamannaah_at_Ranveer_Singh_birthday_party.jpg' Name: 'Ranveer Singh' -> no. Instructions: Analyze the provided URL and Person Name and respond with ONLY 'yes' or 'no'.";
+          "You are a URL Content Analyzer. Your task is to determine if a provided URL contains ONLY the name of the specified celebrity with only two exception rules. Rules: 1. If the URL contains any other person's name alongside the celebrity, the answer is 'no'. 2.If the URL exclusively identifies the celebrity, even with dates or event names, the answer is 'yes'. 3. If the given person name is NOT in the URL, answer 'no'. 4.If the given person name is only in the URL, answer 'yes'. \n Exception rule: If the URL contains words suggesting other people are present with the celebrity (only allowed words: 'and', '&', '+') and the other celebrity name is directly connected with the given celebrity in the url, the answer is 'yes'.\n Exception rule: If the URL contains words suggesting the person was present at other people party/house (only allowed words: 'at') and the name connected with 'at'is othe other celebrity name in the url, the answer is 'yes'.Examples: URL: '...Shah_Rukh_Khan_Kajol.jpg' Name: 'Shah Rukh Khan' -> no.URL: '...Shah_Rukh_Khan_and_Kajol.jpg' Name: 'Shah Rukh Khan' -> yes. URL: '...Shah_Rukh_Khan_and_Kajol_spotted_at_Sonu_Nigam_concert.jpg' Name: 'Sonu Nigam' -> no. URL: '...Ranveer_Singh_&_Tamannaah.jpg' Name: 'Ranveer Singh' -> yes. URL: '...Shahid_Kapoor_2009.jpg' Name: 'Shahid_Kapoor' -> yes. URL: '...Tamannaah_at_Ranveer_Singh_birthday_party.jpg' Name: 'Ranveer Singh' -> no. URL: '...Tamannaah_at_Ranveer_Singh_birthday_party.jpg' Name: 'Tamannaah' -> yes. Instructions: Analyze the provided URL and Person Name and respond with ONLY 'yes' or 'no'.";
         const user = `Respond strictly with yes or no whether the url contains only given the celebrity name including exception case.\nurl: ${imageUrl}\ncelebrityName: ${personName}`;
         try {
           const r = await fetch(endpoint, {
@@ -418,7 +442,7 @@ async function fetchPersonImage(personName: string, category: string) {
               "Content-Type": "application/json",
               Authorization: `Bearer ${Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || ""}`,
             },
-            body: JSON.stringify({ system, user }),
+            body: JSON.stringify({ system, user, api_key: apiKey }),
           });
           if (!r.ok) return false;
           const j = await r.json().catch(() => null) as { content?: string } | null;
@@ -462,19 +486,6 @@ if (matches.length === 0) {
 }
 const randomIndex = Math.floor(Math.random() * matches.length);
 return matches[randomIndex];
-     
-    } catch (err) {
-      clearTimeout(timeout);
-      lastErr = err;
-      console.warn(`Error fetching Wikimedia for "${personName}" attempt ${attempt}:`, err);
-      const waitMs = randomJitter(WM_BASE_RETRY_MS * Math.pow(2, attempt - 1));
-      await sleep(waitMs);
-      continue;
-    }
-  }
-
-  console.error(`Failed to fetch Wikimedia image for "${personName}" after ${WM_MAX_RETRIES} attempts:`, lastErr);
-  return FALLBACK_IMAGE();
 
   function FALLBACK_IMAGE() {
     return 'https://fr0jflsfvamy.objectstorage.eu-frankfurt-1.oci.customer-oci.com/n/fr0jflsfvamy/b/paparazzi/o/default.png';
