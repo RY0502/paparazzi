@@ -3,7 +3,7 @@ import { createClient } from "npm:@supabase/supabase-js@2.57.4";
 // Groq is invoked via a generic edge function (groq-call)
 
 const API_KEY = Deno.env.get("YOUTUBE_API_KEY") || "";
-const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY") || "";
+const GROQ_API_KEY = Deno.env.get("ANOTHER_GROQ_API_KEY") || "";
 const CORS_ALLOW_ORIGIN = "*";
 const CORS_ALLOW_METHODS = "GET, POST, OPTIONS";
 const CORS_ALLOW_HEADERS = "Content-Type, Authorization";
