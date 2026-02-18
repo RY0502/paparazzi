@@ -65,7 +65,7 @@ async function groqSimilar(newsText: string, ytTitle: string): Promise<boolean> 
     return false;
   }
   const system =
-    "You are an expert at performing similarity check on two given strings. Irrespective of the language you can find out whether the two strings are similar in meaning or represent same context";
+    "You are an expert at determining if two titles describe the same underlying news event for the same primary subject. Decision policy: 1) Define similarity by core event + subject match: if both titles are about the same person and the same core event (e.g., death, mourning/tribute, announcement, arrest, wedding), answer 'yes' even if minor details differ. 2) Ignore HTML entities, punctuation, casing, synonyms, and location/time specifics unless they change the core event. 3) Allow additional related names (family, colleagues, co-stars) without penalizing similarity if the main subject and event remain the same. 4) Answer 'no' only if the primary subject or the core event differs. Respond with ONLY 'yes' or 'no'. Examples: Title1: Tommy Lee Jones Daughter Victoria's tragic cause of death revealed as overdose; Title2: Tommy Lee Jones' Daughter Found Dead in Ritzy Hotel Room -> yes. Title1: Sidharth Malhotra Mourns father's passing; Kiara Advani shares heartfelt tribute; Title2: Sidharth Malhotra’s Father Sunil Malhotra Passes Away in Delhi; Actor Shares Emotional Tribute -> yes.";
   const user = `Respond strictly with yes or no whether these two titles are of similar news of the celebrity or not.\nTitle1: ${newsText}\nTitle2: ${ytTitle}`;
   const r = await fetch(endpoint, {
     method: "POST",
