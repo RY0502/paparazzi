@@ -105,7 +105,7 @@ Requirements:
 - Make news current and tabloid worthy
 - Return exactly 15 items
 - The single-line description must be short like a title, maximum 12 words
-- After the single-line description, add " <SEP> " and then news details 7-8 sentences long. Do not include sources or citations. Do not include brackets. Important: Ensure the news details MUST be at least 6 sentences long
+- After the single-line description, add " <SEP> " and then news details 7-8 sentences long. Do not include sources or citations. Do not include brackets. Important: Ensure the news details MUST be at least 8 sentences long
 - Do not use "||" anywhere. Use ONLY "<SEP>" as the separator
 - Constraint:  Return only 1 when news are similar. E.g.
 Ranveer Singh - Dhurandhar marches towards Rs 750
@@ -125,7 +125,7 @@ Requirements:
 - Make news current and  tabloid worthy
 - Return exactly 15 items
 - The single-line description must be short like a title, maximum 12 words
-- After the single-line description, add " <SEP> " and then news details 7-8 sentences long. Do not include sources or citations. Do not include brackets. Important: Ensure the news details MUST be at least 6 sentences long
+- After the single-line description, add " <SEP> " and then news details 7-8 sentences long. Do not include sources or citations. Do not include brackets. Important: Ensure the news details MUST be at least 8 sentences long
 - Do not use "||" anywhere. Use ONLY "<SEP>" as the separator
 - Constraint: return only 1 when news are similar. E.g.
 Gaurav khanna wins big boss 18
@@ -145,7 +145,7 @@ Requirements:
 - Make news current and tabloid worthy
 - Return exactly 15 items
 - The single-line description must be short like a title, maximum 12 words
-- After the single-line description, add " <SEP> " and then news details 7-8 sentences long. Do not include sources or citations. Do not include brackets. Important: Ensure the news details MUST be at least 6 sentences long
+- After the single-line description, add " <SEP> " and then news details 7-8 sentences long. Do not include sources or citations. Do not include brackets. Important: Ensure the news details MUST be at least 8 sentences long
 - Do not use "||" anywhere. Use ONLY "<SEP>" as the separator
 - Constraint:  return only 1 when news are similar. E.g.
 Killing of Rob Reiner and his wife stun hollywood
