@@ -437,10 +437,15 @@ async function fetchPersonImage(personName: string, category: string) {
     return nameParts.some(part => filename.includes(part));
   };
 
-  const selectBestFromData = async (data: any, isWithCat: boolean): Promise<string | null> => {
+  const selectBestFromData = async (data: any, isWithCat: boolean, firstInfoOut?: { value: string }): Promise<string | null> => {
     if (!data || !data.query || !data.query.pages) return null;
     const pages = Object.values<any>(data.query.pages);
     if (pages.length === 0) return null;
+    if (firstInfoOut) {
+      const fp = pages[0];
+      const fi = fp?.imageinfo?.[0];
+      firstInfoOut.value = fi ? JSON.stringify(fi) : "";
+    }
     const candidates: string[] = [];
     for (const page of pages) {
       const info = page?.imageinfo?.[0];
@@ -449,7 +454,7 @@ async function fetchPersonImage(personName: string, category: string) {
         candidates.push(imageUrl);
       }
     }
-    if (candidates.length === 0) return isWithCat ? null : candidates[0];
+    if (candidates.length === 0) return null;
     const matches = candidates.filter(c => filenameMatchesPerson(c, normalizedPersonName));
     if (matches.length === 0) {
       return isWithCat ? null : candidates[0];
@@ -463,7 +468,8 @@ async function fetchPersonImage(personName: string, category: string) {
     return FALLBACK_IMAGE();
   }
   let data = await response.json().catch(() => null);
-  let selected = await selectBestFromData(data, true);
+  const firstInfoWithCat = { value: "" };
+  let selected = await selectBestFromData(data, true, firstInfoWithCat);
   if (selected) return selected;
 
   response = await fetchWikimediaApiResponse(normalizedPersonName);
@@ -471,9 +477,24 @@ async function fetchPersonImage(personName: string, category: string) {
     return FALLBACK_IMAGE();
   }
   data = await response.json().catch(() => null);
-  selected = await selectBestFromData(data, false);
+  const firstInfoPlain = { value: "" };
+  selected = await selectBestFromData(data, false, firstInfoPlain);
   if (selected) return selected;
 
+  if (firstInfoWithCat.value) {
+    try {
+      const o = JSON.parse(firstInfoWithCat.value);
+      const u = o?.thumburl || o?.url;
+      if (u && isValidImageUrl(u)) return u;
+    } catch {}
+  }
+  if (firstInfoPlain.value) {
+    try {
+      const o = JSON.parse(firstInfoPlain.value);
+      const u = o?.thumburl || o?.url;
+      if (u && isValidImageUrl(u)) return u;
+    } catch {}
+  }
   return FALLBACK_IMAGE();
 
   function FALLBACK_IMAGE() {
