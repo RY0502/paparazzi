@@ -449,7 +449,7 @@ async function fetchPersonImage(personName: string, category: string) {
         candidates.push(imageUrl);
       }
     }
-    if (candidates.length === 0) return null;
+    if (candidates.length === 0) return isWithCat ? null : candidates[0];
     const matches = candidates.filter(c => filenameMatchesPerson(c, normalizedPersonName));
     if (matches.length === 0) {
       return isWithCat ? null : candidates[0];
