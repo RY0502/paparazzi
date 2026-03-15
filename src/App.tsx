@@ -277,7 +277,7 @@ function App() {
               <div className="space-y-4">
                 <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Legal</h4>
                 <p className="text-slate-500 text-[10px] font-bold tracking-widest uppercase">
-                  © 2026 Paparazzi.<br/>Built for the limelight.
+                  © RYAXN 2026 Paparazzi.<br/>Built for the limelight.
                 </p>
                 {notifMsg && (
                   <p className="text-amber-400 text-[10px] font-bold uppercase tracking-wider">
@@ -287,16 +287,13 @@ function App() {
               </div>
           </div>
           
-          <div className="mt-16 pt-8 border-t border-white/5 flex justify-between items-center">
+          <div className="mt-16 pt-8 border-t border-white/5 flex justify-center items-center">
             <div className="flex gap-6">
               {['Twitter', 'Instagram', 'YouTube'].map(social => (
                 <span key={social} className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-600 hover:text-rose cursor-pointer transition-colors">
                   {social}
                 </span>
               ))}
-            </div>
-            <div className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-700">
-              RYAXN EXCLUSIVE
             </div>
           </div>
         </div>

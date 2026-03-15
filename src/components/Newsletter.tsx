@@ -140,7 +140,7 @@ function NewsletterContent({ bollywood, tv, hollywood }: { bollywood: NewsItem[]
 
         <div className="text-center mt-12 pt-12 pb-12 border-t border-white/10">
           <p className="text-slate-400 text-base break-words">
-            © 2025 Paparazzi. All rights reserved.
+            © RYAXN 2026 Paparazzi.
           </p>
         </div>
       </div>

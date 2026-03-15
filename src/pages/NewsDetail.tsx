@@ -329,7 +329,7 @@ function NewsDetail({ category, newsId, personName, newsTitle, youtubeUrl, onBac
               </div>
             </div>
             <p className="text-slate-500 text-sm">
-              © 2025 RYaxn. All rights reserved.
+              © RYAXN 2026 Paparazzi.
             </p>
           </div>
         </div>
