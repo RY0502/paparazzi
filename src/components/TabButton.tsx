@@ -11,18 +11,18 @@ function TabButton({ active, onClick, label }: TabButtonProps) {
     <button
       onClick={onClick}
       className={`
-        relative px-4 sm:px-5 py-2.5 rounded-xl font-semibold text-sm transition-all duration-300
+        relative px-6 py-2.5 rounded-full font-bold text-xs uppercase tracking-widest transition-all duration-500 active:scale-95
         ${
           active
-            ? 'text-white bg-white/10 backdrop-blur-lg border border-white/20'
-            : 'text-slate-400 hover:text-slate-200 hover:bg-white/5 backdrop-blur-sm border border-transparent'
+            ? 'text-white border border-white/10 shadow-[0_0_20px_rgba(168,81,110,0.2)]'
+            : 'text-slate-500 hover:text-slate-200 border border-transparent'
         }
       `}
     >
       {active && (
         <>
-          <div className="absolute inset-0 bg-gradient-to-r from-rose-500/80 to-pink-500/80 rounded-xl"></div>
-          <div className="absolute inset-0 bg-gradient-to-r from-rose-500 to-pink-500 rounded-xl blur-lg opacity-50"></div>
+          <div className="absolute inset-0 bg-gradient-to-br from-rosewood to-rosewood/60 rounded-full"></div>
+          <div className="absolute inset-0 bg-rosewood rounded-full blur-md opacity-40"></div>
         </>
       )}
       <span className="relative z-10">{label}</span>

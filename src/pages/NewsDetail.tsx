@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { ArrowLeft, Loader2, Sparkles, Clock } from 'lucide-react';
 import TabButton from '../components/TabButton';
 import { createClient } from '@supabase/supabase-js';
@@ -18,7 +18,6 @@ function NewsDetail({ category, newsId, personName, newsTitle, youtubeUrl, onBac
   const [content, setContent] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const contentRef = useRef<HTMLDivElement>(null);
   const [dbYoutubeUrl, setDbYoutubeUrl] = useState<string | undefined>(undefined);
   const [forceStream, setForceStream] = useState(false);
 
@@ -147,156 +146,170 @@ function NewsDetail({ category, newsId, personName, newsTitle, youtubeUrl, onBac
   }, [category, newsId, personName, newsTitle, forceStream]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex flex-col">
-      <div className="fixed top-0 left-0 right-0 z-10 bg-slate-950/30 backdrop-blur-2xl border-b border-white/10 safe-top">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center h-16 sm:h-20 gap-4">
-            <button
-              onClick={onBack}
-              className="p-2 hover:bg-white/10 backdrop-blur-md rounded-lg transition-colors group"
-              aria-label="Go back"
-            >
-              <ArrowLeft className="w-6 h-6 text-rose-500 group-hover:text-rose-400 transition-colors" />
-            </button>
+    <div className="min-h-screen bg-[#050505] flex flex-col selection:bg-rosewood selection:text-white">
+      {/* Cinematic Background Elements */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-rosewood/10 blur-[120px] rounded-full animate-pulse-slow"></div>
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-gold/5 blur-[120px] rounded-full animate-pulse-slow delay-1000"></div>
+        <div className="absolute inset-0 noise-texture opacity-[0.02]"></div>
+      </div>
 
-            <nav className="flex gap-2">
-              <TabButton
-                active={category === 'bollywood'}
-                onClick={() => onNavigateToCategory('bollywood')}
-                label={
-                  <>
-                    <span className="sm:hidden">B'wood</span>
-                    <span className="hidden sm:inline">Bollywood</span>
-                  </>
-                }
-              />
-              <TabButton
-                active={category === 'tv'}
-                onClick={() => onNavigateToCategory('tv')}
-                label="TV"
-              />
-              <TabButton
-                active={category === 'hollywood'}
-                onClick={() => onNavigateToCategory('hollywood')}
-                label={
-                  <>
-                    <span className="sm:hidden">H'wood</span>
-                    <span className="hidden sm:inline">Hollywood</span>
-                  </>
-                }
-              />
-            </nav>
+      <div className="fixed top-0 left-0 right-0 z-50 bg-onyx/20 backdrop-blur-3xl border-b border-white/5 safe-top">
+        <div className="max-w-7xl mx-auto px-6 lg:px-12">
+          <div className="flex items-center justify-between h-20 sm:h-24">
+            <div className="flex items-center gap-6">
+              <button
+                onClick={onBack}
+                className="group p-3 bg-white/5 hover:bg-rosewood backdrop-blur-md rounded-2xl border border-white/5 transition-all duration-500 shadow-xl"
+                aria-label="Go back"
+              >
+                <ArrowLeft className="w-6 h-6 text-white group-hover:scale-110 transition-transform" />
+              </button>
+
+              <nav className="hidden md:flex items-center p-1 bg-white/5 backdrop-blur-md rounded-full border border-white/5">
+                <TabButton
+                  active={category === 'bollywood'}
+                  onClick={() => onNavigateToCategory('bollywood')}
+                  label="Bollywood"
+                />
+                <TabButton
+                  active={category === 'tv'}
+                  onClick={() => onNavigateToCategory('tv')}
+                  label="TV"
+                />
+                <TabButton
+                  active={category === 'hollywood'}
+                  onClick={() => onNavigateToCategory('hollywood')}
+                  label="Hollywood"
+                />
+              </nav>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className="bg-rosewood/10 px-4 py-1.5 rounded-full border border-rosewood/20">
+                <span className="text-rosewood text-[10px] font-black uppercase tracking-[0.2em]">{category}</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      <main className="flex-grow safe-pt-28 pb-16 px-4 sm:px-6 lg:px-8">
+      <main className="flex-grow safe-pt-28 pb-24 px-6 lg:px-12 relative z-10">
         <div className="max-w-4xl mx-auto">
-          <div className="mb-12">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/5 backdrop-blur-md rounded-full mb-4 border border-white/10">
-              <Sparkles className="w-4 h-4 text-amber-400" />
-              <span className="text-slate-300 text-xs font-semibold uppercase tracking-wider">
-                {category}
+          <header className="mb-16">
+            <div className="flex items-center gap-3 mb-8">
+              <div className="w-12 h-[1px] bg-rosewood"></div>
+              <span className="text-gold text-xs font-black uppercase tracking-[0.3em] flex items-center gap-2">
+                <Sparkles className="w-4 h-4 fill-gold" /> Exclusive Feature
               </span>
             </div>
-            <h1 className="text-4xl sm:text-5xl font-bold mb-4">
-              <span className="bg-gradient-to-r from-rose-500 via-pink-500 to-rose-500 bg-clip-text text-transparent">
-                {personName}
-              </span>
-              <span className="text-slate-400 mx-3">—</span>
-              <span className="text-white">{newsTitle}</span>
+            
+            <h1 className="text-5xl sm:text-7xl font-black mb-8 leading-[1.1] tracking-tighter text-white">
+              <span className="italic font-serif text-rosewood block mb-2">{personName}</span>
+              {newsTitle}
             </h1>
-            <div className="flex items-center gap-4 text-slate-400 mb-6">
-              <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4" />
-                <span className="text-sm font-medium">
-                  {Math.ceil(content.split(' ').length / 200)} min read
-                </span>
+
+            <div className="flex flex-wrap items-center gap-8 text-slate-500 font-bold uppercase tracking-widest text-[10px]">
+              <div className="flex items-center gap-3">
+                <Clock className="w-4 h-4 text-rosewood" />
+                <span>{Math.ceil(content.split(' ').length / 200)} Minute Read</span>
               </div>
+              <div className="flex items-center gap-3">
+                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                <span>Live Feed</span>
               </div>
-            <div className="h-1 w-32 bg-gradient-to-r from-rose-500 to-pink-500 rounded-full"></div>
-          </div>
+            </div>
+          </header>
 
           {loading && content === '' ? (
             <div className="flex flex-col items-center justify-center py-32">
               <div className="relative">
-                <Loader2 className="w-16 h-16 text-rose-500 animate-spin" />
-                <div className="absolute inset-0 blur-xl bg-rose-500/30 animate-pulse"></div>
+                <Loader2 className="w-20 h-20 text-rosewood animate-spin stroke-[3]" />
+                <div className="absolute inset-0 blur-3xl bg-rosewood/40 animate-pulse"></div>
               </div>
-              <p className="mt-8 text-slate-400 font-medium text-lg">
-                Loading details...
-              </p>
+              <p className="mt-12 text-slate-500 font-black tracking-[0.3em] uppercase text-xs">Assembling Details...</p>
             </div>
           ) : error ? (
-            <div className="bg-red-500/10 backdrop-blur-lg border border-red-500/20 rounded-2xl p-8 text-center">
-              <p className="text-red-400 font-medium">{error}</p>
+            <div className="bg-rosewood/10 backdrop-blur-3xl border border-rosewood/20 rounded-3xl p-12 text-center shadow-2xl">
+              <p className="text-rosewood font-bold text-lg">{error}</p>
             </div>
           ) : (
-            <div className="space-y-8">
+            <div className="space-y-16">
               {(dbYoutubeUrl || youtubeUrl) && (
-                <div className="w-full">
-                  <div className="relative w-full bg-black rounded-2xl overflow-hidden border border-white/10">
-                    <div className="relative w-full pt-[56.25%]">
-                      <iframe
-                        className="absolute top-0 left-0 w-full h-full"
-                        src={(dbYoutubeUrl || youtubeUrl || '').replace('watch?v=', 'embed/')}
-                        title="News Video"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowFullScreen
-                      ></iframe>
-                    </div>
+                <section className="relative group">
+                  <div className="absolute inset-0 bg-rosewood/20 blur-3xl rounded-3xl opacity-0 group-hover:opacity-40 transition-opacity duration-700"></div>
+                  <div className="relative bg-onyx rounded-[2rem] overflow-hidden border border-white/5 shadow-2xl aspect-video">
+                    <iframe
+                      className="absolute inset-0 w-full h-full"
+                      src={(dbYoutubeUrl || youtubeUrl || '').replace('watch?v=', 'embed/')}
+                      title="News Video"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    ></iframe>
                   </div>
-                </div>
+                </section>
               )}
 
-              <div
-                ref={contentRef}
-                className="prose prose-invert max-w-none"
-              >
-                <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 p-8 sm:p-12 leading-relaxed">
-                  <div className="space-y-6">
-                    {content.split('\n\n').map((paragraph, idx) => (
-                      paragraph.trim() && (
-                        <p key={idx} className="text-slate-200 text-lg leading-8">
-                          {paragraph.trim()}
-                        </p>
-                      )
-                    ))}
+              <article className="relative">
+                <div className="absolute -left-8 top-0 bottom-0 w-[1px] bg-gradient-to-b from-rosewood via-white/5 to-transparent hidden lg:block"></div>
+                <div className="bg-onyx/40 backdrop-blur-3xl rounded-[2.5rem] border border-white/5 p-10 sm:p-16 shadow-2xl relative overflow-hidden">
+                  <div className="absolute top-0 right-0 p-12 opacity-[0.03] pointer-events-none">
+                    <Sparkles className="w-64 h-64 text-rosewood" />
                   </div>
-                  {!loading && content.trim().split(/\s+/).filter(Boolean).length < 90 && (
-                    <div className="mt-4 text-right">
-                      <button
-                        className="text-slate-300 hover:text-white underline underline-offset-4"
-                        onClick={() => {
-                          if (loading) return;
-                          setError(null);
-                          setContent('');
-                          setForceStream(true);
-                          setLoading(true);
-                        }}
-                      >
-                        read more...
-                      </button>
-                    </div>
-                  )}
-                  {loading && (
-                    <div className="mt-8 flex items-center gap-3">
-                      <div className="w-2 h-2 bg-rose-500 rounded-full animate-pulse"></div>
-                      <span className="text-slate-400 text-sm">
-                        Fetching more details...
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
 
-              <button
-                onClick={onBack}
-                className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white font-semibold rounded-lg transition-all hover:shadow-lg hover:shadow-rose-500/20 active:scale-95"
-              >
-                <ArrowLeft className="w-5 h-5" />
-                Back to News
-              </button>
+                  <div className="prose prose-invert max-w-none relative z-10">
+                    <div className="space-y-10">
+                      {content.split('\n\n').map((paragraph, idx) => (
+                        paragraph.trim() && (
+                          <p key={idx} className="text-slate-200 text-xl leading-[1.8] font-medium font-inter first-letter:text-5xl first-letter:font-serif first-letter:text-rosewood first-letter:mr-3 first-letter:float-left">
+                            {paragraph.trim()}
+                          </p>
+                        )
+                      ))}
+                    </div>
+                    
+                    {!loading && content.trim().split(/\s+/).filter(Boolean).length < 90 && (
+                      <div className="mt-12 text-center">
+                        <button
+                          className="px-8 py-3 rounded-full bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white font-bold tracking-widest uppercase text-[10px] transition-all border border-white/5"
+                          onClick={() => {
+                            if (loading) return;
+                            setError(null);
+                            setContent('');
+                            setForceStream(true);
+                            setLoading(true);
+                          }}
+                        >
+                          Expand Full Coverage
+                        </button>
+                      </div>
+                    )}
+
+                    {loading && (
+                      <div className="mt-16 flex items-center justify-center gap-4">
+                        <div className="flex gap-1.5">
+                          <div className="w-1.5 h-1.5 bg-rosewood rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                          <div className="w-1.5 h-1.5 bg-rosewood rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                          <div className="w-1.5 h-1.5 bg-rosewood rounded-full animate-bounce"></div>
+                        </div>
+                        <span className="text-slate-500 text-[10px] font-black uppercase tracking-[0.3em]">
+                          Transcribing live feed...
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </article>
+
+              <footer className="pt-8">
+                <button
+                  onClick={onBack}
+                  className="group flex items-center gap-4 px-10 py-5 bg-gradient-to-br from-rosewood to-rosewood/80 hover:scale-[1.02] active:scale-95 text-white font-black uppercase tracking-[0.2em] text-xs rounded-2xl transition-all shadow-[0_20px_40px_-15px_rgba(168,81,110,0.5)]"
+                >
+                  <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
+                  Back to Feed
+                </button>
+              </footer>
             </div>
           )}
         </div>

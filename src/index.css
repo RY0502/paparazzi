@@ -84,15 +84,24 @@
   }
 
   .glass-card {
-    background: rgba(30, 41, 59, 0.4);
-    backdrop-filter: blur(20px);
-    border: 1px solid rgba(148, 163, 184, 0.1);
+    background: rgba(17, 17, 17, 0.4);
+    backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
   }
 
   .glass-card-hover {
-    background: rgba(30, 41, 59, 0.6);
-    backdrop-filter: blur(24px);
-    border: 1px solid rgba(244, 63, 94, 0.3);
+    background: rgba(168, 81, 110, 0.05);
+    backdrop-filter: blur(32px);
+    border: 1px solid rgba(168, 81, 110, 0.2);
+    box-shadow: 0 8px 32px 0 rgba(168, 81, 110, 0.1);
+  }
+
+  .premium-border {
+    position: relative;
+    border: 1px solid transparent;
+    background: linear-gradient(rgba(17, 17, 17, 0.8), rgba(17, 17, 17, 0.8)) padding-box,
+                linear-gradient(135deg, rgba(168, 81, 110, 0.3), rgba(251, 188, 4, 0.3)) border-box;
   }
 
   .noise-texture {
