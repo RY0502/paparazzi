@@ -277,7 +277,7 @@ function App() {
               <div className="space-y-4">
                 <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Legal</h4>
                 <p className="text-slate-500 text-[10px] font-bold tracking-widest uppercase">
-                  © RYAXN 2026 Paparazzi.<br/>Built for the limelight.
+                  © RYaxn 2026 Paparazzi.<br/>Where Entertainment Never Sleeps.
                 </p>
                 {notifMsg && (
                   <p className="text-amber-400 text-[10px] font-bold uppercase tracking-wider">
