@@ -21,8 +21,8 @@ function TabButton({ active, onClick, label }: TabButtonProps) {
     >
       {active && (
         <>
-          <div className="absolute inset-0 bg-gradient-to-br from-rosewood to-rosewood/60 rounded-full"></div>
-          <div className="absolute inset-0 bg-rosewood rounded-full blur-md opacity-40"></div>
+          <div className="absolute inset-0 bg-gradient-to-br from-rose to-rose/60 rounded-full"></div>
+          <div className="absolute inset-0 bg-rose rounded-full blur-md opacity-40"></div>
         </>
       )}
       <span className="relative z-10">{label}</span>

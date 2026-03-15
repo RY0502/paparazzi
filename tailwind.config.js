@@ -4,7 +4,7 @@ export default {
   theme: {
     extend: {
       colors: {
-        rosewood: '#A8516E',
+        rose: '#f43f5e',
         onyx: '#111111',
         gold: '#FBBC04',
       },

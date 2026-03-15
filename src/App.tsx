@@ -119,10 +119,10 @@ function App() {
 
   const ptClass = 'safe-pt-28';
   return (
-    <div className="min-h-screen bg-[#050505] text-slate-200 selection:bg-rosewood selection:text-white">
+    <div className="min-h-screen bg-[#050505] text-slate-200 selection:bg-rose selection:text-white">
       {/* Cinematic Background Elements */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-rosewood/10 blur-[120px] rounded-full animate-pulse-slow"></div>
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-rose/10 blur-[120px] rounded-full animate-pulse-slow"></div>
         <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-gold/5 blur-[120px] rounded-full animate-pulse-slow delay-1000"></div>
         <div className="absolute inset-0 noise-texture opacity-[0.02]"></div>
       </div>
@@ -141,8 +141,8 @@ function App() {
               }}
             >
               <div className="relative">
-                <div className="absolute inset-0 bg-rosewood rounded-xl blur-2xl opacity-40 group-hover:opacity-70 transition-opacity"></div>
-                <div className="relative bg-gradient-to-br from-rosewood to-rosewood/80 p-2.5 rounded-2xl border border-white/10 shadow-2xl">
+                <div className="absolute inset-0 bg-rose rounded-xl blur-2xl opacity-40 group-hover:opacity-70 transition-opacity"></div>
+                <div className="relative bg-gradient-to-br from-rose to-rose/80 p-2.5 rounded-2xl border border-white/10 shadow-2xl">
                   <Sparkles className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
                 </div>
               </div>
@@ -151,7 +151,7 @@ function App() {
                   PAPARAZZI
                 </h1>
                 <div className="flex items-center gap-2">
-                  <span className="h-[1px] w-4 bg-rosewood"></span>
+                  <span className="h-[1px] w-4 bg-rose"></span>
                   <p className="text-[10px] font-bold tracking-[0.3em] uppercase text-slate-500">
                     Premium Feed
                   </p>
@@ -190,7 +190,7 @@ function App() {
               </span>
             </div>
             <h2 className="text-6xl sm:text-8xl font-black text-white mb-6 tracking-tighter uppercase font-inter italic">
-              {activeTab} <span className="text-rosewood">News</span>
+              {activeTab} <span className="text-rose">News</span>
             </h2>
             <p className="text-slate-500 text-lg font-medium max-w-xl mx-auto leading-relaxed">
               Curated entertainment exclusives from the heart of {activeTab}.
@@ -200,14 +200,14 @@ function App() {
           {loading ? (
             <div className="flex flex-col items-center justify-center py-32">
               <div className="relative">
-                <Loader2 className="w-16 h-16 text-rosewood animate-spin stroke-[3]" />
-                <div className="absolute inset-0 blur-2xl bg-rosewood/40 animate-pulse"></div>
+                <Loader2 className="w-16 h-16 text-rose animate-spin stroke-[3]" />
+                <div className="absolute inset-0 blur-2xl bg-rose/40 animate-pulse"></div>
               </div>
               <p className="mt-10 text-slate-500 font-bold tracking-widest uppercase text-xs">Syncing Exclusives...</p>
             </div>
           ) : error ? (
-            <div className="bg-rosewood/10 backdrop-blur-3xl border border-rosewood/20 rounded-3xl p-12 text-center shadow-2xl">
-              <p className="text-rosewood font-bold text-lg">{error}</p>
+            <div className="bg-rose/10 backdrop-blur-3xl border border-rose/20 rounded-3xl p-12 text-center shadow-2xl">
+              <p className="text-rose font-bold text-lg">{error}</p>
             </div>
           ) : news.length === 0 ? (
             <div className="bg-white/5 backdrop-blur-3xl border border-white/5 rounded-3xl p-12 text-center">
@@ -232,7 +232,7 @@ function App() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-12 items-start">
             <div className="md:col-span-2">
               <div className="flex items-center gap-4 mb-6">
-                <div className="bg-rosewood p-3 rounded-2xl shadow-2xl">
+                <div className="bg-rose p-3 rounded-2xl shadow-2xl">
                   <Sparkles className="w-6 h-6 text-white" />
                 </div>
                 <h3 className="text-2xl font-black tracking-tighter text-white">PAPARAZZI</h3>
@@ -249,7 +249,7 @@ function App() {
                   onClick={() => setViewingNewsletter(true)}
                   className="flex items-center gap-3 px-6 py-3 bg-white/5 hover:bg-white/10 text-white rounded-xl border border-white/5 transition-all font-bold text-xs uppercase tracking-widest"
                 >
-                  <FileText className="w-4 h-4 text-rosewood" />
+                  <FileText className="w-4 h-4 text-rose" />
                   Newsletter
                 </button>
                 <button
@@ -290,7 +290,7 @@ function App() {
           <div className="mt-16 pt-8 border-t border-white/5 flex justify-between items-center">
             <div className="flex gap-6">
               {['Twitter', 'Instagram', 'YouTube'].map(social => (
-                <span key={social} className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-600 hover:text-rosewood cursor-pointer transition-colors">
+                <span key={social} className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-600 hover:text-rose cursor-pointer transition-colors">
                   {social}
                 </span>
               ))}

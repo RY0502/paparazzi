@@ -91,17 +91,17 @@
   }
 
   .glass-card-hover {
-    background: rgba(168, 81, 110, 0.05);
+    background: rgba(244, 63, 94, 0.05);
     backdrop-filter: blur(32px);
-    border: 1px solid rgba(168, 81, 110, 0.2);
-    box-shadow: 0 8px 32px 0 rgba(168, 81, 110, 0.1);
+    border: 1px solid rgba(244, 63, 94, 0.2);
+    box-shadow: 0 8px 32px 0 rgba(244, 63, 94, 0.1);
   }
 
   .premium-border {
     position: relative;
     border: 1px solid transparent;
     background: linear-gradient(rgba(17, 17, 17, 0.8), rgba(17, 17, 17, 0.8)) padding-box,
-                linear-gradient(135deg, rgba(168, 81, 110, 0.3), rgba(251, 188, 4, 0.3)) border-box;
+                linear-gradient(135deg, rgba(244, 63, 94, 0.3), rgba(251, 188, 4, 0.3)) border-box;
   }
 
   .noise-texture {
