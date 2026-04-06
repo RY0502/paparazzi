@@ -84,7 +84,8 @@ self.addEventListener('notificationclick', (event) => {
         const target = new URL(launchUrl, self.location.origin);
         const isExternal = target.origin !== self.location.origin;
         if (isExternal && !isSpecialProtocol(launchUrl)) {
-          await self.clients.openWindow(target.href);
+          const relay = `/external-launcher.html?u=${encodeURIComponent(target.href)}`;
+          await self.clients.openWindow(relay);
           return;
         }
       } catch {}

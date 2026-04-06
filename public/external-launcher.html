@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Open</title>
+<style>
+body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;margin:0;padding:24px}
+.wrap{max-width:720px;margin:0 auto}
+.btn{display:inline-block;padding:12px 16px;background:#111;color:#fff;border-radius:10px;text-decoration:none}
+.muted{margin-top:12px;color:#555;font-size:13px;word-break:break-all}
+</style>
+</head>
+<body>
+<div class="wrap">
+<a id="open" class="btn" href="#" target="_blank" rel="noopener">Open Link</a>
+<div id="msg" class="muted"></div>
+</div>
+<script>
+(function(){
+  var s=new URLSearchParams(location.search);
+  var u=s.get("u")||"";
+  var a=document.getElementById("open");
+  var m=document.getElementById("msg");
+  if(u){
+    a.href=u;
+    m.textContent=u;
+    try{window.open(u,"_blank");}catch(e){}
+    setTimeout(function(){
+      try{location.href=u;}catch(e){}
+    },50);
+  }else{
+    m.textContent="Missing url";
+  }
+})();
+</script>
+</body>
+</html>
