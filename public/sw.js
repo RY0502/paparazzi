@@ -52,15 +52,24 @@ self.addEventListener('push', (event) => {
 
 function isSpecialProtocol(url) {
   try {
-    const specialProtocols = ['upi://', 'tel://', 'sms://', 'mailto:', 'data:'];
+    const specialProtocols = ['upi://', 'tel:', 'sms:', 'mailto:', 'data:', 'intent://', 'web+'];
     return specialProtocols.some(protocol => url.toLowerCase().startsWith(protocol));
   } catch {
     return false;
   }
 }
 
-function shouldUseOpenWindow(url) {
-  return isSpecialProtocol(url);
+function toLaunchUrl(url) {
+  try {
+    const lower = url.toLowerCase();
+    if (lower.startsWith('upi://')) {
+      const withoutScheme = url.slice('upi://'.length);
+      return `intent://${withoutScheme}#Intent;scheme=upi;end`;
+    }
+    return url;
+  } catch {
+    return url;
+  }
 }
 
 self.addEventListener('notificationclick', (event) => {
@@ -70,9 +79,22 @@ self.addEventListener('notificationclick', (event) => {
 
   event.waitUntil(
     (async () => {
-      if (shouldUseOpenWindow(url)) {
-        await self.clients.openWindow(url);
-        return;
+      const launchUrl = toLaunchUrl(url);
+      try {
+        const target = new URL(launchUrl, self.location.origin);
+        const isExternal = target.origin !== self.location.origin;
+        if (isExternal && !isSpecialProtocol(launchUrl)) {
+          await self.clients.openWindow(target.href);
+          return;
+        }
+      } catch {}
+      if (isSpecialProtocol(launchUrl)) {
+        try {
+          await self.clients.openWindow(launchUrl);
+          return;
+        } catch {
+          return;
+        }
       }
 
       const allClients = await self.clients.matchAll({
@@ -83,7 +105,7 @@ self.addEventListener('notificationclick', (event) => {
       for (const client of allClients) {
         try {
           const clientUrl = new URL(client.url);
-          const targetUrl = new URL(url, clientUrl.origin).href;
+          const targetUrl = new URL(launchUrl, clientUrl.origin).href;
 
           if (client.visibilityState === 'visible') {
             await client.navigate(targetUrl);
@@ -95,7 +117,7 @@ self.addEventListener('notificationclick', (event) => {
         }
       }
 
-      await self.clients.openWindow(url);
+      await self.clients.openWindow(launchUrl);
     })()
   );
 });
