@@ -22,7 +22,10 @@ export async function isNotificationsEnabled(): Promise<boolean> {
   }
   try {
     const reg = await navigator.serviceWorker.getRegistration();
-    const sub = await reg?.pushManager.getSubscription();
+    if (!reg) {
+      return false;
+    }
+    const sub = await reg.pushManager.getSubscription();
     return !!sub;
   } catch {
     return false;
@@ -47,6 +50,9 @@ export async function enableNotifications(): Promise<{ success: boolean; message
       (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
       ((navigator as any).standalone === true);
     if (isIOS && !isStandalone) {
+      if (Notification.permission === 'granted') {
+        return { success: true, message: 'Notifications already enabled' };
+      }
       return { success: false, message: 'On iPhone, install to Home Screen to enable push' };
     }
     if (!supabaseUrl || !supabaseAnonKey) {

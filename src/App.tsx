@@ -51,8 +51,18 @@ function App() {
 
   useEffect(() => {
     (async () => {
-      const enabled = await isNotificationsEnabled();
-      setNotifsEnabled(enabled);
+      try {
+        const enabled = await isNotificationsEnabled();
+        if (!enabled && Notification.permission === 'granted') {
+          setNotifsEnabled(true);
+        } else {
+          setNotifsEnabled(enabled);
+        }
+      } catch {
+        if (Notification.permission === 'granted') {
+          setNotifsEnabled(true);
+        }
+      }
     })();
   }, []);
 
