@@ -80,13 +80,13 @@ self.addEventListener('notificationclick', (event) => {
   event.waitUntil(
     (async () => {
       const launchUrl = toLaunchUrl(url);
+      let relayUrl = '';
       try {
         const target = new URL(launchUrl, self.location.origin);
         const isExternal = target.origin !== self.location.origin;
         if (isExternal && !isSpecialProtocol(launchUrl)) {
-          const relay = `/external-launcher.html?u=${encodeURIComponent(target.href)}`;
-          await self.clients.openWindow(relay);
-          return;
+          relayUrl = `/external-launcher.html?u=${encodeURIComponent(target.href)}`;
+          try { await self.clients.openWindow(relayUrl); } catch {}
         }
       } catch {}
       if (isSpecialProtocol(launchUrl)) {
@@ -106,7 +106,7 @@ self.addEventListener('notificationclick', (event) => {
       for (const client of allClients) {
         try {
           const clientUrl = new URL(client.url);
-          const targetUrl = new URL(launchUrl, clientUrl.origin).href;
+          const targetUrl = relayUrl ? new URL(relayUrl, clientUrl.origin).href : new URL(launchUrl, clientUrl.origin).href;
 
           if (client.visibilityState === 'visible') {
             await client.navigate(targetUrl);
