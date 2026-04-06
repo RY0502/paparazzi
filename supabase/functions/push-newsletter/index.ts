@@ -5,7 +5,7 @@ import webpush from "npm:web-push@3.6.7";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey"
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
 
 type NewsRow = {
@@ -19,9 +19,9 @@ type NewsRow = {
 function toBold(input: string) {
   const mapChar = (ch: string) => {
     const code = ch.codePointAt(0)!;
-    if (code >= 65 && code <= 90) return String.fromCodePoint(0x1D400 + (code - 65));
-    if (code >= 97 && code <= 122) return String.fromCodePoint(0x1D41A + (code - 97));
-    if (code >= 48 && code <= 57) return String.fromCodePoint(0x1D7CE + (code - 48));
+    if (code >= 65 && code <= 90) return String.fromCodePoint(0x1d400 + (code - 65));
+    if (code >= 97 && code <= 122) return String.fromCodePoint(0x1d41a + (code - 97));
+    if (code >= 48 && code <= 57) return String.fromCodePoint(0x1d7ce + (code - 48));
     return ch;
   };
   return Array.from(input).map(mapChar).join("");
@@ -69,7 +69,7 @@ function buildPayload(stories: Awaited<ReturnType<typeof getTopStories>>) {
     icon: "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/1f4f0.svg",
     image,
     tag: "paparazzi-daily",
-    actions: [{ action: "open", title: "Open App" }]
+    actions: [{ action: "open", title: "Open App" }],
   };
 }
 
@@ -83,6 +83,16 @@ type PushPayload = {
   actions?: Array<{ action: string; title: string }>;
 };
 
+function getIstHourAsString() {
+  // Asia/Kolkata is IST (UTC+5:30)
+  const hour = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Kolkata",
+    hour: "2-digit",
+    hour12: false,
+  }).format(new Date());
+  return hour; // e.g. "22"
+}
+
 async function sendToAll(
   supabase: ReturnType<typeof createClient>,
   payload: PushPayload,
@@ -90,25 +100,46 @@ async function sendToAll(
 ) {
   webpush.setVapidDetails(vapid.subject, vapid.publicKey, vapid.privateKey);
 
-  const { data: subs, error } = await supabase
-    .from("push_subscriptions")
-    .select("id, endpoint, keys");
+  const { data: subs, error } = await supabase.from("push_subscriptions").select("id, endpoint, keys");
   if (error) {
     throw new Error(error.message || "Failed to load subscriptions");
   }
-  const results: { id: string; ok: boolean; error?: string }[] = [];
+
+  // ✅ Filter condition:
+  // If subscription id is this value AND current hour in IST is "22",
+  // then do NOT send notification to that subscription.
+  const blockedSubscriptionId = "fd12b86c-a8c8-460c-8ced-003e4b05ac26";
+  const istHour = getIstHourAsString();
+  const shouldBlock = istHour === "22";
+
+  const results: { id: string; ok: boolean; error?: string; skipped?: boolean }[] = [];
   const list = (subs || []) as Array<{ id: string; endpoint: string; keys?: { p256dh?: string; auth?: string } }>;
+
   console.log(`[push-newsletter] Sending push to ${list.length} subscriptions`);
   for (const s of list) {
+    if (shouldBlock && s.id === blockedSubscriptionId) {
+      console.log(
+        `[push-newsletter] SKIP id=${s.id} because IST hour=${istHour} and id matches blocked id`
+      );
+      results.push({ id: s.id, ok: true, skipped: true });
+      continue;
+    }
+
     const subscription: { endpoint: string; keys: { p256dh?: string; auth?: string } } = {
       endpoint: s.endpoint,
       keys: s.keys || {},
     };
+
     try {
-      await webpush.sendNotification(subscription as unknown as webpush.PushSubscription, JSON.stringify(payload), {
-        TTL: 3600,
-        urgency: "high",
-      } as webpush.RequestOptions);
+      await webpush.sendNotification(
+        subscription as unknown as webpush.PushSubscription,
+        JSON.stringify(payload),
+        {
+          TTL: 3600,
+          urgency: "high",
+        } as webpush.RequestOptions
+      );
+
       results.push({ id: s.id, ok: true });
       const ep = String(s.endpoint || "");
       const epShort = ep.length > 32 ? `${ep.slice(0, 16)}…${ep.slice(-8)}` : ep;
@@ -116,20 +147,27 @@ async function sendToAll(
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       results.push({ id: s.id, ok: false, error: msg });
-      const status = (err as { statusCode?: number; status?: number } | undefined)?.statusCode ||
+
+      const status =
+        (err as { statusCode?: number; status?: number } | undefined)?.statusCode ||
         (err as { status?: number } | undefined)?.status ||
         0;
+
       if (status === 404 || status === 410) {
         await supabase.from("push_subscriptions").delete().eq("id", s.id);
       }
+
       const ep = String(s.endpoint || "");
       const epShort = ep.length > 32 ? `${ep.slice(0, 16)}…${ep.slice(-8)}` : ep;
       console.warn(`[push-newsletter] FAIL id=${s.id} endpoint=${epShort} status=${status} error=${msg}`);
     }
   }
-  const ok = results.filter(r => r.ok).length;
-  const fail = results.length - ok;
-  console.log(`[push-newsletter] Summary: sent=${ok} failed=${fail}`);
+
+  const ok = results.filter((r) => r.ok && !r.skipped).length;
+  const fail = results.filter((r) => !r.ok).length;
+  const skipped = results.filter((r) => r.skipped).length;
+
+  console.log(`[push-newsletter] Summary: sent=${ok} failed=${fail} skipped=${skipped}`);
   return results;
 }
 
@@ -143,6 +181,7 @@ Deno.serve(async (req) => {
     const vapidPublic = Deno.env.get("VAPID_PUBLIC_KEY");
     const vapidPrivate = Deno.env.get("VAPID_PRIVATE_KEY");
     const vapidSubject = Deno.env.get("VAPID_SUBJECT") || "mailto:admin@example.com";
+
     if (!supabaseUrl || !supabaseServiceKey) {
       throw new Error("Supabase credentials not configured");
     }
@@ -153,28 +192,40 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     const stories = await getTopStories(supabase);
     const payload = buildPayload(stories);
+
     const results = await sendToAll(supabase, payload, {
       subject: vapidSubject,
       publicKey: vapidPublic,
       privateKey: vapidPrivate,
     });
-    console.log(`[push-newsletter] Completed send. ok=${results.filter(r => r.ok).length} failed=${results.filter(r => !r.ok).length}`);
 
-    return new Response(JSON.stringify({
-      message: "Push notifications sent",
-      sent: results.filter(r => r.ok).length,
-      failed: results.filter(r => !r.ok).length,
-      timestamp: new Date().toISOString()
-    }), {
-      status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" }
-    });
+    const sent = results.filter((r) => r.ok && !r.skipped).length;
+    const failed = results.filter((r) => !r.ok).length;
+    const skipped = results.filter((r) => r.skipped).length;
+
+    console.log(
+      `[push-newsletter] Completed send. ok=${sent} failed=${failed} skipped=${skipped}`
+    );
+
+    return new Response(
+      JSON.stringify({
+        message: "Push notifications sent",
+        sent,
+        failed,
+        skipped,
+        timestamp: new Date().toISOString(),
+      }),
+      {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error("[push-newsletter.error]", message);
     return new Response(JSON.stringify({ error: message }), {
       status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" }
+      headers: { ...corsHeaders, "Content-Type": "application/json", ...corsHeaders },
     });
   }
 });
