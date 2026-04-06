@@ -53,15 +53,9 @@ function App() {
     (async () => {
       try {
         const enabled = await isNotificationsEnabled();
-        if (!enabled && Notification.permission === 'granted') {
-          setNotifsEnabled(true);
-        } else {
-          setNotifsEnabled(enabled);
-        }
+        setNotifsEnabled(enabled);
       } catch {
-        if (Notification.permission === 'granted') {
-          setNotifsEnabled(true);
-        }
+        setNotifsEnabled(false);
       }
     })();
   }, []);

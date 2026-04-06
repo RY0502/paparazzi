@@ -17,18 +17,18 @@ export async function isNotificationsEnabled(): Promise<boolean> {
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
     return false;
   }
-  if (Notification.permission !== 'granted') {
-    return false;
-  }
   try {
     const reg = await navigator.serviceWorker.getRegistration();
     if (!reg) {
-      return false;
+      return Notification.permission === 'granted';
     }
     const sub = await reg.pushManager.getSubscription();
-    return !!sub;
+    if (sub) {
+      return true;
+    }
+    return Notification.permission === 'granted';
   } catch {
-    return false;
+    return Notification.permission === 'granted';
   }
 }
 
