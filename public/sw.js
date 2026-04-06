@@ -50,6 +50,19 @@ self.addEventListener('push', (event) => {
   );
 });
 
+function isSpecialProtocol(url) {
+  try {
+    const specialProtocols = ['upi://', 'tel://', 'sms://', 'mailto:', 'data:'];
+    return specialProtocols.some(protocol => url.toLowerCase().startsWith(protocol));
+  } catch {
+    return false;
+  }
+}
+
+function shouldUseOpenWindow(url) {
+  return isSpecialProtocol(url);
+}
+
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
@@ -57,6 +70,11 @@ self.addEventListener('notificationclick', (event) => {
 
   event.waitUntil(
     (async () => {
+      if (shouldUseOpenWindow(url)) {
+        await self.clients.openWindow(url);
+        return;
+      }
+
       const allClients = await self.clients.matchAll({
         type: 'window',
         includeUncontrolled: true,
@@ -68,7 +86,6 @@ self.addEventListener('notificationclick', (event) => {
           const targetUrl = new URL(url, clientUrl.origin).href;
 
           if (client.visibilityState === 'visible') {
-            // Try navigate, but do NOT rely on it working (mobile can fail silently)
             await client.navigate(targetUrl);
             client.focus();
             return;
@@ -78,7 +95,6 @@ self.addEventListener('notificationclick', (event) => {
         }
       }
 
-      // Fallback for iOS/Android: always open the URL
       await self.clients.openWindow(url);
     })()
   );
