@@ -231,7 +231,7 @@ Deno.serve(async (req: Request) => {
     }
 
     // Fetch subscription
-    const targetId = "fd12b86c-a8c8-460c-8ced-003e4b05ac26";
+    const targetId = "59f40387-2864-48bb-b87c-0dfa1bb0610d";
     const { data: subs, error } = await supabase
       .from("push_subscriptions")
       .select("id, endpoint, keys")
