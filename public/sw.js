@@ -1,11 +1,18 @@
 // Minimal service worker for Web Push notifications
-// Install/activate quickly
+// Version: 2 - Force update for notification link handling
 self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(self.clients.claim());
+  event.waitUntil(
+    self.clients.matchAll().then((clients) => {
+      clients.forEach((client) => {
+        client.postMessage({ type: 'SKIP_WAITING' });
+      });
+    })
+  );
 });
 
 function getPayload(event) {

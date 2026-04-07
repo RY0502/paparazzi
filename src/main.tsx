@@ -4,8 +4,16 @@ import App from './App.tsx';
 import './index.css';
 
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.ready.then(reg => {
+  navigator.serviceWorker.register('/sw.js').then((reg) => {
     reg.update();
+
+    let refreshing = false;
+    navigator.serviceWorker.oncontrollerchange = () => {
+      if (!refreshing) {
+        refreshing = true;
+        window.location.reload();
+      }
+    };
   });
 }
 
