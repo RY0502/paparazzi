@@ -52,6 +52,16 @@ self.addEventListener('notificationclick', (event) => {
   const url = (event.notification && event.notification.data && event.notification.data.url) || '/';
   event.waitUntil(
     (async () => {
+      try {
+        const urlObj = new URL(url);
+        const isExternal = urlObj.protocol === 'http:' || urlObj.protocol === 'https:';
+
+        if (isExternal) {
+          await self.clients.openWindow(url);
+          return;
+        }
+      } catch {}
+
       const allClients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
       for (const client of allClients) {
         try {
