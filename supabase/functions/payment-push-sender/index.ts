@@ -20,12 +20,21 @@ function dataUrlToBytes(dataUrl: string) {
   const contentType = match[1];
   const base64 = match[2];
 
-  // Deno/Edge runtime provides atob
   const binary = atob(base64);
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
 
   return { contentType, bytes };
+}
+
+function guessExtensionFromMime(contentType: string) {
+  const ct = contentType.toLowerCase().trim();
+  if (ct.includes("png")) return "png";
+  if (ct.includes("jpeg") || ct.includes("jpg")) return "jpg";
+  if (ct.includes("webp")) return "webp";
+  if (ct.includes("gif")) return "gif";
+  // fallback
+  return "png";
 }
 
 Deno.serve(async (req: Request) => {
@@ -55,7 +64,7 @@ Deno.serve(async (req: Request) => {
     let body: any;
     try {
       body = await req.json();
-    } catch (e) {
+    } catch {
       return new Response(JSON.stringify({ error: "Invalid JSON body" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" }
@@ -74,7 +83,7 @@ Deno.serve(async (req: Request) => {
     if (typeof paymentData === "string") {
       try {
         paymentData = JSON.parse(paymentData);
-      } catch (e) {
+      } catch {
         return new Response(JSON.stringify({ error: "paymentData is a string but not valid JSON" }), {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" }
@@ -96,30 +105,31 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    // ✅ If paymentUrl is a data URL, upload it to public bucket 'QRs' as 'image.png',
-    // overwrite existing file, and replace paymentUrl with the HTTPS public URL.
+    // If paymentUrl is a data URL, upload bytes to 'QRs' with a NEW unique name,
+    // then replace paymentUrl with the HTTPS public URL.
     if (isDataUrl(paymentUrl)) {
       const { contentType, bytes } = dataUrlToBytes(paymentUrl);
 
       const bucket = "QRs";
-      const objectPath = "image.png";
+      const ext = guessExtensionFromMime(contentType);
+
+      const now = new Date();
+      const ts = now.toISOString().replace(/[:.]/g, "-");
+      const rand = crypto.randomUUID();
+      const objectPath = `payment-qr-${ts}-${rand}.${ext}`;
 
       const { error: uploadError } = await supabase.storage
         .from(bucket)
         .upload(objectPath, bytes, {
           contentType,
-          upsert: true // overwrite image.png if it exists
+          upsert: false
         });
 
-      if (uploadError) {
-        throw new Error(`Storage upload failed: ${uploadError.message}`);
-      }
+      if (uploadError) throw new Error(`Storage upload failed: ${uploadError.message}`);
 
       const { data: publicUrlData } = supabase.storage.from(bucket).getPublicUrl(objectPath);
 
-      if (!publicUrlData?.publicUrl) {
-        throw new Error("Failed to build public URL for uploaded image");
-      }
+      if (!publicUrlData?.publicUrl) throw new Error("Failed to build public URL for uploaded image");
 
       paymentUrl = publicUrlData.publicUrl;
     }
@@ -165,7 +175,6 @@ Deno.serve(async (req: Request) => {
     const bodyText = `PaymentData:\n${kvPairs}\n\nPaymentURL: Click to Pay`;
 
     // Build payload
-    // NOTE: put URL inside data as well, so client SW can reliably open it on click
     const payload = {
       title: "Payment Request",
       body: bodyText,
@@ -192,6 +201,44 @@ Deno.serve(async (req: Request) => {
         await supabase.from("push_subscriptions").delete().eq("id", targetId);
       }
       throw new Error(`Failed to send push: ${msg}`);
+    }
+
+    // After push is sent: delete images in bucket 'QRs' older than 1 month.
+    // Non-fatal: if cleanup fails, we still return success for the push.
+    try {
+      const bucket = "QRs";
+      const cutoffMs = Date.now() - 30 * 24 * 60 * 60 * 1000;
+
+      let start = 0;
+      const limit = 100;
+
+      while (true) {
+        const { data: listed, error: listError } = await supabase.storage
+          .from(bucket)
+          .list("", { limit, offset: start });
+
+        if (listError) throw new Error(listError.message);
+
+        if (!listed || listed.length === 0) break;
+
+        for (const obj of listed as any[]) {
+          const createdAt = obj?.created_at ?? obj?.updated_at ?? null;
+          if (!createdAt) continue;
+
+          const t = new Date(createdAt).getTime();
+          if (!Number.isNaN(t) && t < cutoffMs) {
+            const name = obj.name as string;
+            // delete expects the object path relative to the bucket
+            await supabase.storage.from(bucket).remove([name]);
+          }
+        }
+
+        // If fewer than limit returned, we reached the end
+        if (listed.length < limit) break;
+        start += limit;
+      }
+    } catch (cleanupErr) {
+      console.error("[payment-push-sender.cleanup.error]", cleanupErr);
     }
 
     return new Response(JSON.stringify({ message: "Push sent" }), {
