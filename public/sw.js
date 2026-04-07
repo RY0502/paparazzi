@@ -109,9 +109,12 @@ self.addEventListener('notificationclick', (event) => {
           const targetUrl = relayUrl ? new URL(relayUrl, clientUrl.origin).href : new URL(launchUrl, clientUrl.origin).href;
 
           if (client.visibilityState === 'visible') {
-            await client.navigate(targetUrl);
-            client.focus();
-            return;
+            const isInternalPath = !relayUrl && !isSpecialProtocol(launchUrl) && new URL(launchUrl, self.location.origin).origin === self.location.origin;
+            if (isInternalPath) {
+              await client.navigate(targetUrl);
+              client.focus();
+              return;
+            }
           }
         } catch {
           // If navigate fails for any reason, continue to fallback below
