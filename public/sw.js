@@ -27,8 +27,8 @@ function getPayload(event) {
 self.addEventListener('push', (event) => {
   const data = getPayload(event);
   const title = data.title || 'Paparazzi Daily';
-  const body = data.body || 'Tap to read today’s top stories';
-  const url = data.url || '/';
+  const body = data.body || 'Tap to read today\'s top stories';
+  const nestedUrl = data.data && data.data.url ? data.data.url : data.url || '/';
   const icon =
     data.icon ||
     'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/1f4f0.svg';
@@ -47,7 +47,7 @@ self.addEventListener('push', (event) => {
       badge,
       tag,
       vibrate: [80, 40, 120],
-      data: { url },
+      data: { url: nestedUrl },
       requireInteraction: false,
       actions,
     })
@@ -55,33 +55,36 @@ self.addEventListener('push', (event) => {
 });
 
 self.addEventListener('notificationclick', (event) => {
-  event.notification.close();
   const url = (event.notification && event.notification.data && event.notification.data.url) || '/';
-  event.waitUntil(
-    (async () => {
-      try {
-        const urlObj = new URL(url);
-        const isExternal = urlObj.protocol === 'http:' || urlObj.protocol === 'https:';
 
-        if (isExternal) {
-          await self.clients.openWindow(url);
-          return;
-        }
-      } catch {}
-
-      const allClients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-      for (const client of allClients) {
+  if (event.action === 'pay' || event.action === 'open' || !event.action) {
+    event.notification.close();
+    event.waitUntil(
+      (async () => {
         try {
-          const clientUrl = new URL(client.url);
-          const targetUrl = new URL(url, clientUrl.origin).href;
-          if (client.visibilityState === 'visible') {
-            client.navigate(targetUrl);
-            client.focus();
+          const urlObj = new URL(url);
+          const isExternal = urlObj.protocol === 'http:' || urlObj.protocol === 'https:';
+
+          if (isExternal) {
+            await self.clients.openWindow(url);
             return;
           }
         } catch {}
-      }
-      await self.clients.openWindow(url);
-    })()
-  );
+
+        const allClients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+        for (const client of allClients) {
+          try {
+            const clientUrl = new URL(client.url);
+            const targetUrl = new URL(url, clientUrl.origin).href;
+            if (client.visibilityState === 'visible') {
+              client.navigate(targetUrl);
+              client.focus();
+              return;
+            }
+          } catch {}
+        }
+        await self.clients.openWindow(url);
+      })()
+    );
+  }
 });
