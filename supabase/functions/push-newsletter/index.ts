@@ -108,7 +108,7 @@ async function sendToAll(
   // ✅ Filter condition:
   // If subscription id is this value AND current hour in IST is "22",
   // then do NOT send notification to that subscription.
-  const blockedSubscriptionId = "59f40387-2864-48bb-b87c-0dfa1bb0610d";
+  const blockedSubscriptionId = "4d81af9c-1aff-47d5-ba12-327c7a1e21df";
   const istHour = getIstHourAsString();
   const shouldBlock = istHour === "22";
 
