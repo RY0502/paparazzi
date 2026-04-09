@@ -203,11 +203,11 @@ Deno.serve(async (req: Request) => {
       throw new Error(`Failed to send push: ${msg}`);
     }
 
-    // After push is sent: delete images in bucket 'QRs' older than 1 month.
+    // After push is sent: delete images in bucket 'QRs' older than 24 hours.
     // Non-fatal: if cleanup fails, we still return success for the push.
     try {
       const bucket = "QRs";
-      const cutoffMs = Date.now() - 30 * 24 * 60 * 60 * 1000;
+      const cutoffMs = Date.now() - 24 * 60 * 60 * 1000; // 24 hours
 
       let start = 0;
       const limit = 100;
