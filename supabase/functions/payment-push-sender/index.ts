@@ -29,10 +29,16 @@ function dataUrlToBytes(dataUrl: string) {
 
 function guessExtensionFromMime(contentType: string) {
   const ct = contentType.toLowerCase().trim();
+
   if (ct.includes("png")) return "png";
   if (ct.includes("jpeg") || ct.includes("jpg")) return "jpg";
   if (ct.includes("webp")) return "webp";
   if (ct.includes("gif")) return "gif";
+
+  // ✅ Added SVG support
+  // Handles: image/svg+xml
+  if (ct.includes("svg")) return "svg";
+
   // fallback
   return "png";
 }
