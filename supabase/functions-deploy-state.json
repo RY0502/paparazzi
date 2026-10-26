@@ -1,6 +1,10 @@
 {
   "projectId": "58663724",
   "functions": {
+    "code-input-push-sender": {
+      "hasChanged": false,
+      "hash": "b997a7e8e38adb6293970a2ba698df3f2df769c0f9e0a1d8ef41eb686c4a2728"
+    },
     "duplicate-news-cleaner": {
       "hasChanged": false,
       "hash": "8a8b5facce77d5d293603e5a1a2f4af331e3a21c4ad7353a2b1798d2f8d26d27"
@@ -41,9 +45,9 @@
       "hasChanged": false,
       "hash": "71cca1c577cc9193d32f12c6c6ea4bf837205fb63da88ec861ed16d4605c13e3"
     },
-    "code-input-push-sender": {
+    "code-lookup": {
       "hasChanged": false,
-      "hash": "b997a7e8e38adb6293970a2ba698df3f2df769c0f9e0a1d8ef41eb686c4a2728"
+      "hash": "6913b01ac8a1726c78a93e3b67329fb79fa3ef1d2036f9550699d90bd3b077e2"
     }
   }
 }

@@ -30,3 +30,6 @@ verify_jwt = false
 
 [functions.code-input-push-sender]
 verify_jwt = false
+
+[functions.code-lookup]
+verify_jwt = false
