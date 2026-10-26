@@ -42,7 +42,7 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const { message, identifier, targetId } = body || {};
+    const { message, identifier, targetId, appUrl } = body || {};
 
     if (!message || typeof message !== "string") {
       return new Response(JSON.stringify({ error: "message is required and must be a string" }), {
@@ -56,6 +56,29 @@ Deno.serve(async (req: Request) => {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    // The code-input page lives inside the Paparazzi web app, NOT at the
+    // Supabase project URL. The caller must pass the app's public origin in
+    // `appUrl` (e.g. "https://your-bolt-host.example"). We never derive it
+    // from supabaseUrl — that would point at the API host and the SW/open
+    // navigation would fail with "The requested path is invalid".
+    let appBaseUrl = "";
+    if (typeof appUrl === "string" && appUrl.length > 0) {
+      try {
+        const parsed = new URL(appUrl);
+        if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+          appBaseUrl = parsed.origin;
+        }
+      } catch {
+        // fall through to validation error
+      }
+    }
+    if (!appBaseUrl) {
+      return new Response(
+        JSON.stringify({ error: "appUrl is required (the public origin of the Paparazzi app, e.g. https://your-host)" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
 
     // Resolve the push subscription to send to.
@@ -87,10 +110,6 @@ Deno.serve(async (req: Request) => {
 
     // Build a deep-link URL that carries the identifier to the code-input page.
     // The page reads `?id=<identifier>` and renders the message + input box.
-    const appBaseUrl = supabaseUrl.replace(/\/+$/, "");
-    // The app is hosted at the project root; the code-input page is a client-side
-    // route within the same origin. We use a query param so it works without a
-    // server-side router.
     const inputPageUrl = `${appBaseUrl}/?id=${encodeURIComponent(identifier)}`;
 
     const payload = {
@@ -98,7 +117,7 @@ Deno.serve(async (req: Request) => {
       body: message,
       icon: "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/1f511.svg",
       tag: "code-input",
-      data: { url: inputPageUrl, identifier },
+      data: { url: inputPageUrl, identifier, message },
       actions: [{ action: "open", title: "Enter Code" }],
     };
 
