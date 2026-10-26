@@ -68,6 +68,34 @@ Deno.serve(async (req: Request) => {
 
     if (error) throw new Error(error.message || "Failed to query codes");
 
+    // Retention: keep at most the 10 newest rows for this identifier (by
+    // created_at desc). If there are more than 10, delete the older ones.
+    // Non-fatal: cleanup failures don't break the lookup response.
+    try {
+      const { data: allRows, error: listError } = await supabase
+        .from("codes")
+        .select("id")
+        .eq("identifier", identifier)
+        .order("created_at", { ascending: false });
+
+      if (listError) throw listError;
+
+      if (allRows && allRows.length > 10) {
+        const keepIds = allRows.slice(0, 10).map((r: any) => r.id);
+        // Delete rows for this identifier whose id is not among the kept 10.
+        const { error: deleteError } = await supabase
+          .from("codes")
+          .delete()
+          .eq("identifier", identifier)
+          .not("id", "in", `(${keepIds.map((id: string) => id).join(",")})`);
+
+        if (deleteError) throw deleteError;
+      }
+    } catch (cleanupErr) {
+      const msg = cleanupErr instanceof Error ? cleanupErr.message : String(cleanupErr);
+      console.error("[code-lookup.cleanup.error]", msg);
+    }
+
     // maybeSingle() returns null when no row matches; that maps to code: null.
     return new Response(
       JSON.stringify({ identifier, code: data ? data.code : null, created_at: data ? data.created_at : null }),

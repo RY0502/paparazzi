@@ -5,6 +5,10 @@
       "hasChanged": false,
       "hash": "b997a7e8e38adb6293970a2ba698df3f2df769c0f9e0a1d8ef41eb686c4a2728"
     },
+    "code-lookup": {
+      "hasChanged": false,
+      "hash": "298580b05f24bae182e0419fb5b94ff25538ec49f63cb5eea4abdb077e71bcf0"
+    },
     "duplicate-news-cleaner": {
       "hasChanged": false,
       "hash": "8a8b5facce77d5d293603e5a1a2f4af331e3a21c4ad7353a2b1798d2f8d26d27"
@@ -44,10 +48,6 @@
     "youtube-search-first": {
       "hasChanged": false,
       "hash": "71cca1c577cc9193d32f12c6c6ea4bf837205fb63da88ec861ed16d4605c13e3"
-    },
-    "code-lookup": {
-      "hasChanged": false,
-      "hash": "6913b01ac8a1726c78a93e3b67329fb79fa3ef1d2036f9550699d90bd3b077e2"
     }
   }
 }
