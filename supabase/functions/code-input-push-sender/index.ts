@@ -26,9 +26,28 @@ Deno.serve(async (req: Request) => {
     const vapidPublic = Deno.env.get("VAPID_PUBLIC_KEY");
     const vapidPrivate = Deno.env.get("VAPID_PRIVATE_KEY");
     const vapidSubject = Deno.env.get("VAPID_SUBJECT") || "mailto:admin@example.com";
+    const appUrl = Deno.env.get("APP_URL");
 
-    if (!supabaseUrl || !supabaseServiceKey) throw new Error("Supabase credentials not configured");
-    if (!vapidPublic || !vapidPrivate) throw new Error("VAPID keys not configured");
+    if (!supabaseUrl || !supabaseServiceKey) {
+      throw new Error("Supabase credentials not configured");
+    }
+    if (!vapidPublic || !vapidPrivate) {
+      throw new Error("VAPID keys not configured");
+    }
+    if (!appUrl) {
+      throw new Error("APP_URL is not configured");
+    }
+
+    let appBaseUrl: string;
+    try {
+      const parsed = new URL(appUrl);
+      if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+        throw new Error("APP_URL must use HTTP or HTTPS");
+      }
+      appBaseUrl = parsed.origin;
+    } catch {
+      throw new Error("APP_URL must be a valid HTTP or HTTPS URL");
+    }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
@@ -42,7 +61,7 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const { message, identifier, targetId, appUrl } = body || {};
+    const { message, identifier, targetId } = body || {};
 
     if (!message || typeof message !== "string") {
       return new Response(JSON.stringify({ error: "message is required and must be a string" }), {
@@ -58,32 +77,8 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    // The code-input page lives inside the Paparazzi web app, NOT at the
-    // Supabase project URL. The caller must pass the app's public origin in
-    // `appUrl` (e.g. "https://your-bolt-host.example"). We never derive it
-    // from supabaseUrl — that would point at the API host and the SW/open
-    // navigation would fail with "The requested path is invalid".
-    let appBaseUrl = "";
-    if (typeof appUrl === "string" && appUrl.length > 0) {
-      try {
-        const parsed = new URL(appUrl);
-        if (parsed.protocol === "http:" || parsed.protocol === "https:") {
-          appBaseUrl = parsed.origin;
-        }
-      } catch {
-        // fall through to validation error
-      }
-    }
-    if (!appBaseUrl) {
-      return new Response(
-        JSON.stringify({ error: "appUrl is required (the public origin of the Paparazzi app, e.g. https://your-host)" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
-
     // Resolve the push subscription to send to.
-    // If a targetId (push_subscriptions.id) is provided, use it; otherwise
-    // fall back to the same fixed UUID used by payment-push-sender.
+    // If targetId is provided, use it; otherwise use the default subscription ID.
     const resolvedTargetId = typeof targetId === "string" && targetId.length > 0
       ? targetId
       : "4d81af9c-1aff-47d5-ba12-327c7a1e21df";
@@ -96,6 +91,7 @@ Deno.serve(async (req: Request) => {
       .maybeSingle();
 
     if (error) throw new Error(error.message || "Failed to query subscriptions");
+
     if (!subs) {
       return new Response(JSON.stringify({ error: `No subscription found for id ${resolvedTargetId}` }), {
         status: 404,
@@ -103,13 +99,15 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const subscription: { endpoint: string; keys?: { p256dh?: string; auth?: string } } = {
+    const subscription: {
+      endpoint: string;
+      keys?: { p256dh?: string; auth?: string };
+    } = {
       endpoint: subs.endpoint,
       keys: subs.keys || {},
     };
 
-    // Build a deep-link URL that carries the identifier to the code-input page.
-    // The page reads `?id=<identifier>` and renders the message + input box.
+    // Build a deep link to the code-input page in the app.
     const inputPageUrl = `${appBaseUrl}/?id=${encodeURIComponent(identifier)}`;
 
     const payload = {
@@ -131,9 +129,11 @@ Deno.serve(async (req: Request) => {
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       const status = (err as any)?.statusCode || (err as any)?.status || 0;
+
       if (status === 404 || status === 410) {
         await supabase.from("push_subscriptions").delete().eq("id", resolvedTargetId);
       }
+
       throw new Error(`Failed to send push: ${msg}`);
     }
 
@@ -144,6 +144,7 @@ Deno.serve(async (req: Request) => {
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error("[code-input-push-sender.error]", message);
+
     return new Response(JSON.stringify({ error: message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
