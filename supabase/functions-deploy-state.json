@@ -1,0 +1,49 @@
+{
+  "projectId": "58663724",
+  "functions": {
+    "duplicate-news-cleaner": {
+      "hasChanged": false,
+      "hash": "8a8b5facce77d5d293603e5a1a2f4af331e3a21c4ad7353a2b1798d2f8d26d27"
+    },
+    "github-readme-weekly-commit": {
+      "hasChanged": false,
+      "hash": "bdece998c94efbb0da262f7d47360154b6b4493ffe6b73ab622a3a00b6456e28"
+    },
+    "groq-call": {
+      "hasChanged": false,
+      "hash": "34498f7fa9e5898e03d344e80852b4d97237660046ed17ca1dd07019860b88b8"
+    },
+    "news-scheduler": {
+      "hasChanged": false,
+      "hash": "8fded9459f3625525aa0968cc8dcbea73e933276b4130d2afbe1a0f84542e54d"
+    },
+    "payment-push-sender": {
+      "hasChanged": false,
+      "hash": "a2d033ac60a3f49fe43bda7e8e3eba217c9cc5ea443345ed4b08bd4a90927cf6"
+    },
+    "push-newsletter": {
+      "hasChanged": false,
+      "hash": "3ca2c42ba51f0cf411068b793369a4cbf83e8d8c1a6df7a16b290a5b6247a209"
+    },
+    "push-subscribe": {
+      "hasChanged": false,
+      "hash": "333038ac1a95faba3a7cddd0ec7bd6cf82d136687ec57a31b42f863879220ac1"
+    },
+    "stream-news-content": {
+      "hasChanged": false,
+      "hash": "aab73b0f5a437d43e6b056d6447c6ad949a8f399ba138f9586dd8efa4fd3d5b1"
+    },
+    "update-news-body": {
+      "hasChanged": false,
+      "hash": "adcc07488ebf7cdd5cba402ce90671dab23dc6d785aa079da191a638474f88be"
+    },
+    "youtube-search-first": {
+      "hasChanged": false,
+      "hash": "71cca1c577cc9193d32f12c6c6ea4bf837205fb63da88ec861ed16d4605c13e3"
+    },
+    "code-input-push-sender": {
+      "hasChanged": false,
+      "hash": "b997a7e8e38adb6293970a2ba698df3f2df769c0f9e0a1d8ef41eb686c4a2728"
+    }
+  }
+}

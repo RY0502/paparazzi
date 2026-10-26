@@ -1,0 +1,32 @@
+[functions.news-scheduler]
+verify_jwt = false
+
+[functions.stream-news-content]
+verify_jwt = false
+
+[functions.duplicate-news-cleaner]
+verify_jwt = true
+
+[functions.youtube-search-first]
+verify_jwt = false
+
+[functions.update-news-body]
+verify_jwt = false
+
+[functions.push-newsletter]
+verify_jwt = false
+
+[functions.push-subscribe]
+verify_jwt = false
+
+[functions.groq-call]
+verify_jwt = false
+
+[functions.payment-push-sender]
+verify_jwt = false
+
+[functions.github-readme-weekly-commit]
+verify_jwt = false
+
+[functions.code-input-push-sender]
+verify_jwt = false

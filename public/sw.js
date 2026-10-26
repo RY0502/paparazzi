@@ -55,18 +55,37 @@ self.addEventListener('push', (event) => {
 });
 
 self.addEventListener('notificationclick', (event) => {
-  const url = (event.notification && event.notification.data && event.notification.data.url) || '/';
+  const notifData = (event.notification && event.notification.data) || {};
+  const url = notifData.url || '/';
+  const identifier = notifData.identifier || '';
+
+  // For code-input notifications, append the identifier (and any stored
+  // message) to the deep-link URL so the code-input page can read them.
+  let targetUrl = url;
+  if (identifier) {
+    try {
+      const u = new URL(url, self.location.origin);
+      u.searchParams.set('id', identifier);
+      const storedMsg = notifData.message;
+      if (typeof storedMsg === 'string' && storedMsg) {
+        u.searchParams.set('msg', storedMsg);
+      }
+      targetUrl = u.pathname + u.search + u.hash;
+    } catch {
+      // fall back to the raw url
+    }
+  }
 
   if (event.action === 'pay' || event.action === 'open' || !event.action) {
     event.notification.close();
     event.waitUntil(
       (async () => {
         try {
-          const urlObj = new URL(url);
+          const urlObj = new URL(targetUrl);
           const isExternal = urlObj.protocol === 'http:' || urlObj.protocol === 'https:';
 
           if (isExternal) {
-            await self.clients.openWindow(url);
+            await self.clients.openWindow(targetUrl);
             return;
           }
         } catch {}
@@ -75,15 +94,15 @@ self.addEventListener('notificationclick', (event) => {
         for (const client of allClients) {
           try {
             const clientUrl = new URL(client.url);
-            const targetUrl = new URL(url, clientUrl.origin).href;
+            const resolvedUrl = new URL(targetUrl, clientUrl.origin).href;
             if (client.visibilityState === 'visible') {
-              client.navigate(targetUrl);
+              client.navigate(resolvedUrl);
               client.focus();
               return;
             }
           } catch {}
         }
-        await self.clients.openWindow(url);
+        await self.clients.openWindow(targetUrl);
       })()
     );
   }

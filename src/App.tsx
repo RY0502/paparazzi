@@ -4,6 +4,7 @@ import NewsCard from './components/NewsCard';
 import TabButton from './components/TabButton';
 import NewsDetail from './pages/NewsDetail';
 import NewsletterPage from './pages/NewsletterPage';
+import CodeInputPage from './pages/CodeInputPage';
 import { fetchNews } from './services/newsService';
 import type { NewsItem, Category } from './types';
 import { enableNotifications, isNotificationsEnabled } from './services/pushService';
@@ -29,6 +30,10 @@ function App() {
   } | null>(null);
   const [scrollPosition, setScrollPosition] = useState(0);
   const [viewingNewsletter, setViewingNewsletter] = useState(false);
+  const [codeInputState, setCodeInputState] = useState<{
+    identifier: string;
+    message: string | null;
+  } | null>(null);
   const [notifsEnabled, setNotifsEnabled] = useState(false);
   const [notifBusy, setNotifBusy] = useState(false);
   const [notifMsg, setNotifMsg] = useState<string | null>(null);
@@ -38,6 +43,20 @@ function App() {
       window.scrollTo(0, scrollPosition);
     }
   }, [selectedNews, scrollPosition]);
+
+  // Deep-link: a push notification may open the app with `?id=<identifier>`.
+  // Show the code-input page so the user can enter and submit their code.
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const id = params.get('id');
+      if (id) {
+        setCodeInputState({ identifier: id, message: params.get('msg') });
+      }
+    } catch {
+      // ignore malformed query string
+    }
+  }, []);
 
   useEffect(() => {
     loadNews(activeTab);
@@ -100,6 +119,26 @@ function App() {
     setActiveTab(category);
     setSelectedNews(null);
   };
+
+  if (codeInputState) {
+    return (
+      <CodeInputPage
+        identifier={codeInputState.identifier}
+        message={codeInputState.message}
+        onBack={() => {
+          setCodeInputState(null);
+          try {
+            const url = new URL(window.location.href);
+            url.searchParams.delete('id');
+            url.searchParams.delete('msg');
+            window.history.replaceState({}, '', url.toString());
+          } catch {
+            // ignore
+          }
+        }}
+      />
+    );
+  }
 
   if (viewingNewsletter) {
     return (
